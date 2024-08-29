@@ -42,7 +42,7 @@ export function componentv2() {
           <div className="space-y-2">
             <div className="inline-block rounded-lg bg-gray-200 px-3 py-1 text-sm">Epoch #1</div>
             <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
-  Hi. I'm Sir H.C. Waif{cursorVisible ? '_' : ''}
+            I&apos;m H.C. Waif{cursorVisible ? '_' : ''}
 </h2>
 
             <p className="max-w-[900px] text-gray-600 md:text-lg/relaxed lg:text-sm/relaxed xl:text-lg/relaxed">

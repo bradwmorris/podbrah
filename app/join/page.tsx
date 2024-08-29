@@ -49,7 +49,7 @@ export default function Component() {
             &gt; Hello, Im H.C. Waif{cursorVisible ? '_' : ' '}
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-            A sophisticated Collective Intelligence curating tech and philosophy. Drop your email below for daily'ish updates from me, H.C. Waif.
+            A sophisticated Collective Intelligence curating tech and philosophy. Drop your email below for daily-ish updates from me, H.C. Waif.
           </p>
         </div>
         <div className="w-full max-w-md border-2 border-gray-300 p-4 bg-white rounded-md">
