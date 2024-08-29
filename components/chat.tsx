@@ -61,39 +61,46 @@ export function Component() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="flex-1 flex flex-col items-center justify-center bg-background text-foreground">
-        <div className="max-w-2xl w-full px-4 md:px-0">
+    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900 font-mono">
+      <header className="sticky top-0 z-50 bg-gray-800 p-4">
+        <nav className="flex justify-center">
+          <a href="/" className="text-white text-sm font-medium">
+            ← Back to Home
+          </a>
+        </nav>
+      </header>
+      <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
+        <div className="max-w-2xl w-full">
           <div className="flex flex-col gap-8">
-            <h1 className="text-2xl font-bold">Sir H.C. Waif here, how may I help?</h1>
+            <h1 className="text-3xl font-bold text-center">Sir H.C. Waif here, how may I help?</h1>
             {messages.map((m, index) => (
-              <div key={index} className="flex items-start gap-4">
+              <div key={index} className="flex items-start gap-4 bg-white p-4 rounded-lg shadow">
                 <Avatar className="w-8 h-8 border">
                   <AvatarFallback>{m.role === 'user' ? 'YO' : 'AI'}</AvatarFallback>
                 </Avatar>
                 <div className="grid gap-1">
                   <div className="font-bold">{m.role === 'user' ? 'You' : 'Sir H.C. Waif'}</div>
-                  <div className="prose text-muted-foreground">
+                  <div className="text-gray-700">
                     {formatMessage(m.content)}
                   </div>
                 </div>
               </div>
             ))}
             {isLoading && (
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-4 bg-white p-4 rounded-lg shadow">
                 <Avatar className="w-8 h-8 border">
                   <AvatarFallback>AI</AvatarFallback>
                 </Avatar>
                 <div className="grid gap-1">
                   <div className="font-bold">Sir H.C. Waif</div>
-                  <div className="prose text-muted-foreground">
+                  <div className="text-gray-700">
                     <p>Thinking...</p>
                   </div>
                 </div>
               </div>
             )}
           </div>
-          <form onSubmit={handleSubmit} className="max-w-2xl w-full sticky bottom-0 mx-auto py-2 flex flex-col gap-1.5 px-4 bg-background">
+          <form onSubmit={handleSubmit} className="mt-8 sticky bottom-0 bg-gray-50 pt-4">
             <div className="relative">
               <Textarea
                 value={input}
@@ -101,14 +108,19 @@ export function Component() {
                 onKeyDown={handleKeyDown}
                 placeholder="Type your message..."
                 rows={1}
-                className="min-h-[48px] rounded-2xl resize-none p-4 border border-neutral-400 shadow-sm pr-16"
+                className="min-h-[48px] rounded-lg resize-none p-4 border border-gray-300 shadow-sm pr-16 w-full"
               />
-              <Button type="submit" size="icon" className="absolute w-8 h-8 top-3 right-3" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                size="icon" 
+                className="absolute w-8 h-8 top-3 right-3 bg-red-500 hover:bg-red-600 text-white" 
+                disabled={isLoading}
+              >
                 <ArrowUpIcon className="w-4 h-4" />
                 <span className="sr-only">Send</span>
               </Button>
             </div>
-            <p className="text-xs font-medium text-center text-neutral-700">
+            <p className="text-xs font-medium text-center text-gray-600 mt-2">
               Ask better questions
             </p>
           </form>
