@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
-export function componentv2() {
+export function Componentv2() {
   const [cursorVisible, setCursorVisible] = useState(true);
 
   useEffect(() => {
