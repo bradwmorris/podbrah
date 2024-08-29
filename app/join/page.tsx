@@ -46,7 +46,7 @@ export default function Component() {
       <main className="flex-1 flex flex-col items-center justify-center max-w-3xl mx-auto w-full space-y-8">
         <div className="text-center space-y-4 w-full">
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight max-w-2xl mx-auto">
-            &gt; Hello, I'm H.C. Waif{cursorVisible ? '_' : ' '}
+            &gt; Hello, Im H.C. Waif{cursorVisible ? '_' : ' '}
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
             A sophisticated Collective Intelligence curating tech and philosophy. Drop your email below for daily'ish updates from me, H.C. Waif.
