@@ -117,7 +117,7 @@ export default function SummaryPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0E1116] text-white font-sans">
+    <div className="flex flex-col min-h-screen bg-background text-white font-sans">
       <Header showFullNav={false} />
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-4xl mx-auto">
@@ -136,9 +136,9 @@ export default function SummaryPage() {
                 {themeResponses.map((response, index) => (
                   <div 
                     key={index} 
-                    className="bg-[#161B22] rounded-lg p-6 shadow-lg"
+                    className="bg-border rounded-lg p-6 shadow-lg"
                   >
-                    <h2 className="text-xl font-semibold text-[#21C55D] mb-4">
+                    <h2 className="text-xl font-semibold text-ctaGreen mb-4">
                       {response.themeTitle}
                     </h2>
                     <div className="text-gray-300">
@@ -151,7 +151,7 @@ export default function SummaryPage() {
               <div className="mt-8 flex justify-center">
                 <Button
                   onClick={() => router.push('/profile')}
-                  className="bg-[#21C55D] text-white py-3 px-6 rounded-lg hover:bg-[#1CA54C] transition-colors duration-200"
+                  className="bg-ctaGreen text-white py-3 px-6 rounded-lg hover:bg-ctaGreenDark transition-colors duration-200"
                 >
                   View Profile
                 </Button>
@@ -163,9 +163,9 @@ export default function SummaryPage() {
               {themeResponses.map((response, index) => (
                 <div 
                   key={index} 
-                  className="bg-[#161B22] rounded-lg p-6 shadow-lg"
+                  className="bg-border rounded-lg p-6 shadow-lg"
                 >
-                  <h2 className="text-xl font-semibold text-[#21C55D] mb-4">
+                  <h2 className="text-xl font-semibold text-ctaGreen mb-4">
                     {response.themeTitle}
                   </h2>
                   <div className="text-gray-300">
@@ -186,7 +186,7 @@ export default function SummaryPage() {
               <div className="mt-8 flex justify-center">
                 <Button
                   onClick={handleSubmit}
-                  className="bg-[#21C55D] text-white py-3 px-6 rounded-lg hover:bg-[#1CA54C] transition-colors duration-200"
+                  className="bg-ctaGreen text-white py-3 px-6 rounded-lg hover:bg-ctaGreenDark transition-colors duration-200"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Submitting...' : 'Submit Ideas'}

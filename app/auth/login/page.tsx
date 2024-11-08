@@ -12,9 +12,9 @@ export default function LoginPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-[#0E1116]">
+    <div className="min-h-screen bg-background text-white flex flex-col">
       <Header showFullNav={false} />
-      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-4rem)]">
+      <div className="flex items-center justify-center flex-1 p-4 sm:p-6 md:p-8">
         {/* Removed the onSuccess prop */}
         <LoginForm />
       </div>

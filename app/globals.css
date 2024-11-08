@@ -1,21 +1,33 @@
+/* app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  /* Background and Foreground Colors */
+  --background: 0 0% 10%; /* Off-black: hsl(0, 0%, 10%) -> #1A1A1A */
+  --foreground: 210 40% 98%; /* Light color for text: hsl(210, 40%, 98%) */
+  --border: 0 0% 20%; /* Border color: hsl(0, 0%, 20%) -> #333333 */
+  
+  /* CTA Green Colors */
+  --cta-green: 145 77% 46%;        /* hsl(145, 77%, 46%) -> #1db954 */
+  --cta-green-dark: 145 77% 36%;   /* hsl(145, 77%, 36%) -> #17a644 */
+  
+  /* Input Background Color */
+  --input: 0 0% 20%; /* hsl(0, 0%, 20%) -> #333333 */
+  
   /* ... other variables ... */
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
+  --background: 222.2 84% 4.9%; /* Adjusted for dark mode if needed */
   --foreground: 210 40% 98%;
+  --input: 0 0% 25%; /* Slightly lighter for dark mode */
   /* ... other dark mode variables ... */
 }
 
 * {
-  border-color: var(--border);
+  border-color: hsl(var(--border));
 }
 
 body {
@@ -23,78 +35,9 @@ body {
   color: hsl(var(--foreground));
 }
 
-.blog-content {
-  max-width: none;
-}
+/* Removed all blog-related styles */
 
-.blog-content p {
-  margin-bottom: 1.5rem;
-}
-
-.blog-content h1,
-.blog-content h2,
-.blog-content h3,
-.blog-content h4,
-.blog-content h5,
-.blog-content h6 {
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-}
-
-.blog-content blockquote {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  padding-left: 1rem;
-  border-left: 4px solid #d1d5db;
-  font-style: italic;
-}
-
-.blog-content ul,
-.blog-content ol {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  padding-left: 1.5rem;
-}
-
-.blog-content li {
-  margin-bottom: 0.5rem;
-}
-
-.blog-content pre {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.blog-content hr {
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-}
-
-.blog-content img {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.blog-content {
-  white-space: pre-wrap;
-}
-
-.blog-content .video-container {
-  position: relative;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
-  height: 0;
-  overflow: hidden;
-  max-width: 100%;
-}
-
-.blog-content .video-container iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
+/* Retain chatContainer styles if needed, otherwise remove them */
 .chatContainer {
   --chat--color-primary: #FF0000 !important;
   --chat--color-secondary: #00FF00 !important;

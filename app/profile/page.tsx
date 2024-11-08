@@ -1,20 +1,11 @@
-// app/profile/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { supabaseAuth } from '@/lib/supabaseAuth';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Header from '@/components/header';
-
-interface UserIdea {
-  id: number;
-  podcast_id: number;
-  user_interpretation: string;
-  created_at: string;
-  podcast_title?: string;
-}
 
 interface Profile {
   id: string;
@@ -25,45 +16,51 @@ interface Profile {
   profile_completed: boolean;
 }
 
+interface UserIdea {
+  id: number;
+  podcast_id: number;
+  user_interpretation: string;
+  created_at: string;
+  podcast_title?: string;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isLoading: authLoading, session } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ideas, setIdeas] = useState<UserIdea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isInitialized = useRef(false);
+  const currentUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    console.log('Profile page mounted, auth loading:', authLoading, 'user:', user?.id);
+    if (authLoading) return;
     
-    async function loadProfileAndIdeas() {
-      if (authLoading) {
-        console.log('Auth is still loading...');
-        return;
-      }
-      
-      if (!user || !session) {
-        console.log('No user or session, redirecting to login...');
-        router.push('/auth/login');
-        return;
-      }
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
 
+    const userId = user?.id;
+    if (!userId) return;
+
+    if (isInitialized.current && userId === currentUserId.current) {
+      return;
+    }
+
+    async function loadProfileAndIdeas() {
       try {
+        setLoading(true);
+        
         // Fetch profile
-        console.log('Fetching profile for user:', user.id);
         const { data: profileData, error: profileError } = await supabaseAuth
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single();
 
-        if (profileError) {
-          console.error('Profile fetch error:', profileError);
-          throw profileError;
-        }
-
-        console.log('Profile data retrieved:', profileData);
-        setProfile(profileData);
+        if (profileError) throw profileError;
 
         // Fetch ideas
         const { data: ideasData, error: ideasError } = await supabaseAuth
@@ -72,50 +69,49 @@ export default function ProfilePage() {
             *,
             overview_embed(metadata)
           `)
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
-        if (ideasError) {
-          console.error('Ideas fetch error:', ideasError);
-          throw ideasError;
-        }
+        if (ideasError) throw ideasError;
 
-        setIdeas(ideasData.map(idea => ({
+        setProfile(profileData);
+        setIdeas(ideasData.map((idea: any) => ({
           id: idea.id,
           podcast_id: idea.podcast_id,
           user_interpretation: idea.user_interpretation,
           created_at: idea.created_at,
-          podcast_title: idea.overview_embed?.metadata?.podcast_title || 'Unknown Podcast',
+          podcast_title: idea.overview_embed?.[0]?.metadata?.podcast_title || 'Unknown Podcast',
         })));
-      } catch (err: any) {
+
+        currentUserId.current = userId;
+        isInitialized.current = true;
+      } catch (err) {
         console.error('Error loading profile data:', err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'Failed to load profile');
       } finally {
         setLoading(false);
       }
     }
 
     loadProfileAndIdeas();
-  }, [user, authLoading, session, router]);
+  }, [user, authLoading, router]);
 
-  if (authLoading || loading) {
-    console.log('Showing loading state...');
+  if (authLoading || (loading && !isInitialized.current)) {
     return (
-      <div className="min-h-screen bg-[#0E1116] text-white">
+      <div className="min-h-screen bg-background text-white flex flex-col">
         <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex items-center justify-center flex-1">
           <p>Loading profile...</p>
         </div>
       </div>
     );
   }
 
-  if (!user || !session) {
-    console.log('No user/session in render phase, showing sign in message...');
+  if (!user) {
     return (
-      <div className="min-h-screen bg-[#0E1116] text-white">
+      <div className="min-h-screen bg-background text-white flex flex-col">
         <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex items-center justify-center flex-1">
           <p className="text-red-500">Please sign in to view your profile</p>
         </div>
       </div>
@@ -123,22 +119,29 @@ export default function ProfilePage() {
   }
 
   if (error || !profile) {
-    console.log('Error or no profile:', error);
     return (
-      <div className="min-h-screen bg-[#0E1116] text-white">
+      <div className="min-h-screen bg-background text-white flex flex-col">
         <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <p className="text-red-500">{error || 'Profile not found'}</p>
+        <div className="flex items-center justify-center flex-1">
+          <div className="text-red-500 bg-red-500/10 p-4 rounded-lg">
+            <p>{error || 'Profile not found'}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-md transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0E1116] text-white">
+    <div className="min-h-screen bg-background text-white flex flex-col">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="bg-[#161B22] rounded-lg p-8 mb-8">
+        <div className="bg-border rounded-lg p-8 mb-8">
           <div className="flex items-center gap-6">
             <Avatar className="w-24 h-24">
               <AvatarImage src={profile.avatar_url || ''} alt={profile.name} />
@@ -159,11 +162,11 @@ export default function ProfilePage() {
             ideas.map((idea) => (
               <div
                 key={idea.id}
-                className="bg-[#161B22] rounded-lg p-6 hover:border-[#21C55D] border border-transparent transition-colors"
+                className="bg-border rounded-lg p-6 hover:border-ctaGreen transition-colors"
               >
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-[#21C55D]">
+                    <h3 className="text-lg font-semibold text-ctaGreen">
                       {idea.podcast_title}
                     </h3>
                     <p className="text-sm text-gray-400">

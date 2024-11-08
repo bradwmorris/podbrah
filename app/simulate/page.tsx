@@ -130,7 +130,7 @@ export default function SimulationPage() {
 
   if (!currentPodcast) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#0E1116] text-white font-sans">
+      <div className="flex flex-col min-h-screen bg-background text-white font-sans">
         <Header showFullNav={false} />
         <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
           <p className="text-center">{error || 'Loading podcast information...'}</p>
@@ -140,15 +140,15 @@ export default function SimulationPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0E1116] text-white font-sans">
+    <div className="flex flex-col min-h-screen bg-background text-white font-sans">
       <Header showFullNav={false} />
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-4xl mx-auto">
-          <h1 className="text-5xl font-bold tracking-tight text-white text-center mb-8">
+          <h1 className="text-5xl font-bold tracking-tight text-center mb-8">
             {typedText}
           </h1>
 
-          <div className="flex items-center bg-[#161B22] rounded-lg overflow-hidden">
+          <div className="flex items-center bg-border rounded-lg overflow-hidden">
             <Input
               type="text"
               placeholder="Your Name"
@@ -160,13 +160,13 @@ export default function SimulationPage() {
             <Button
               onClick={handleSubmit}
               disabled={!name}
-              className="bg-[#21C55D] text-white px-6 py-3 rounded-lg hover:bg-[#1CA54C] transition-colors duration-200"
+              className="bg-ctaGreen text-white px-6 py-3 rounded-lg hover:bg-ctaGreenDark transition-colors duration-200"
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
           </div>
 
-          {message && <p className="text-sm font-medium text-[#21C55D] mt-4 text-center">{message}</p>}
+          {message && <p className="text-sm font-medium text-ctaGreen mt-4 text-center">{message}</p>}
           {error && <p className="text-sm font-medium text-red-500 mt-4 text-center">{error}</p>}
         </div>
       </main>

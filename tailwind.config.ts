@@ -1,13 +1,14 @@
+// tailwind.config.ts
 import type { Config } from "tailwindcss"
 
-const config = {
+const config: Config = {
   darkMode: ["class"],
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
-	],
+  ],
   prefix: "",
   theme: {
     container: {
@@ -20,7 +21,7 @@ const config = {
     extend: {
       colors: {
         border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
+        input: "hsl(var(--input))",          /* Added input color */
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -52,6 +53,9 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        /* Custom CTA Green Colors */
+        ctaGreen: "hsl(var(--cta-green))",          // #1db954
+        ctaGreenDark: "hsl(var(--cta-green-dark))", // #17a644
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -75,6 +79,6 @@ const config = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config
+}
 
 export default config

@@ -1,7 +1,6 @@
-// app/feed/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { supabaseAuth } from '@/lib/supabaseAuth';
@@ -15,32 +14,6 @@ interface Profile {
   avatar_url: string | null;
 }
 
-interface OverviewEmbed {
-  id: number;
-  metadata: {
-    podcast_title: string;
-  };
-}
-
-interface SupabaseData {
-  id: number;
-  user_id: string;
-  user_interpretation: string;
-  created_at: string;
-  podcast_id: number;
-  profiles: { 
-    id: string;
-    twin_name: string;
-    avatar_url: string | null;
-  }[];
-  overview_embed: {
-    id: number;
-    metadata: {
-      podcast_title: string;
-    };
-  }[];
-}
-
 interface FeedItem {
   id: number;
   user_id: string;
@@ -52,45 +25,34 @@ interface FeedItem {
 
 export default function FeedPage() {
   const router = useRouter();
-  const { user, isLoading: authLoading, session } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const isInitialized = useRef(false);
+  const currentUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    console.log('Feed page mounted:', {
-      authLoading,
-      hasUser: !!user,
-      hasSession: !!session,
-      userId: user?.id,
-      timestamp: new Date().toISOString()
-    });
-  }, []);
+    if (authLoading) return;
+    
+    // Handle the case where user is not authenticated
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
 
-  useEffect(() => {
-    console.log('Feed auth state changed:', {
-      authLoading,
-      hasUser: !!user,
-      hasSession: !!session,
-      userId: user?.id,
-      timestamp: new Date().toISOString()
-    });
-  }, [authLoading, user, session]);
+    // Guard against performing operations with null user
+    const userId = user?.id;
+    if (!userId) return;
 
-  useEffect(() => {
-    let isMounted = true;
+    // Prevent duplicate fetches
+    if (isInitialized.current && userId === currentUserId.current) {
+      return;
+    }
 
     async function loadFeed() {
-      if (!user || !session) {
-        console.log('No auth, redirecting...');
-        router.push('/auth/login');
-        return;
-      }
-
       try {
-        console.log('Loading feed for user:', user.id);
-        
+        setLoading(true);
         const { data, error: queryError } = await supabaseAuth
           .from('user_ideas')
           .select(`
@@ -113,78 +75,52 @@ export default function FeedPage() {
 
         if (queryError) throw queryError;
 
-        if (!data) {
-          throw new Error('No data returned from query');
-        }
+        const formattedData = data?.map((item: any) => ({
+          id: item.id,
+          user_id: item.user_id,
+          user_interpretation: item.user_interpretation,
+          created_at: item.created_at,
+          podcast_title: item.overview_embed?.[0]?.metadata?.podcast_title || 'Unknown Podcast',
+          profile: {
+            id: item.profiles?.[0]?.id || 'unknown',
+            twin_name: item.profiles?.[0]?.twin_name || 'Unknown User',
+            avatar_url: item.profiles?.[0]?.avatar_url
+          }
+        })) || [];
 
-        if (isMounted) {
-          const formattedData = data.map((item: any) => {
-            // Safely extract profile data
-            const profile = item.profiles && Array.isArray(item.profiles) && item.profiles.length > 0
-              ? item.profiles[0]
-              : { id: 'unknown', twin_name: 'Unknown User', avatar_url: null };
-
-            // Safely extract podcast title
-            const podcastTitle = item.overview_embed && 
-                               Array.isArray(item.overview_embed) && 
-                               item.overview_embed.length > 0 && 
-                               item.overview_embed[0]?.metadata?.podcast_title || 'Unknown Podcast';
-
-            return {
-              id: item.id,
-              user_id: item.user_id,
-              user_interpretation: item.user_interpretation,
-              created_at: item.created_at,
-              podcast_title: podcastTitle,
-              profile: {
-                id: profile.id,
-                twin_name: profile.twin_name,
-                avatar_url: profile.avatar_url
-              }
-            };
-          });
-
-          console.log('Feed data loaded:', {
-            itemCount: formattedData.length,
-            timestamp: new Date().toISOString()
-          });
-
-          setFeedItems(formattedData);
-          setLoading(false);
-        }
+        setFeedItems(formattedData);
+        currentUserId.current = userId;
+        isInitialized.current = true;
       } catch (err) {
         console.error('Error loading feed:', err);
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Failed to load feed');
-          setLoading(false);
-        }
+        setError(err instanceof Error ? err.message : 'Failed to load feed');
+      } finally {
+        setLoading(false);
       }
     }
 
-    if (!authLoading) {
-      loadFeed();
-    } else {
-      console.log('Waiting for auth to complete...');
-    }
+    loadFeed();
+  }, [user, authLoading, router]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [user, authLoading, session, router]);
-
-  if (authLoading || loading) {
-    console.log('Rendering loading state:', {
-      authLoading,
-      loading,
-      timestamp: new Date().toISOString()
-    });
+  if (authLoading || (loading && !isInitialized.current)) {
     return (
-      <div className="min-h-screen bg-[#0E1116] text-white">
+      <div className="min-h-screen bg-background text-white flex flex-col">
         <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex items-center justify-center flex-1">
           <div className="animate-pulse text-lg">
-            {authLoading ? 'Checking authentication...' : 'Loading feed...'}
+            Loading feed...
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background text-white flex flex-col">
+        <Header />
+        <div className="flex items-center justify-center flex-1">
+          <div className="text-red-500">Please sign in to view the feed</div>
         </div>
       </div>
     );
@@ -192,9 +128,9 @@ export default function FeedPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0E1116] text-white">
+      <div className="min-h-screen bg-background text-white flex flex-col">
         <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex items-center justify-center flex-1">
           <div className="text-red-500 bg-red-500/10 p-4 rounded-lg">
             <p>Error: {error}</p>
             <button 
@@ -210,10 +146,10 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0E1116] text-white">
+    <div className="min-h-screen bg-background text-white flex flex-col">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Digital Twin Feed</h1>
+        <h1 className="text-3xl font-bold mb-8">Friends Feed</h1>
         
         <div className="space-y-6">
           {feedItems.length === 0 ? (
@@ -225,13 +161,13 @@ export default function FeedPage() {
             feedItems.map((item) => (
               <div
                 key={item.id}
-                className="bg-[#161B22] rounded-lg p-6 hover:border-[#21C55D] border border-transparent transition-colors duration-300"
+                className="bg-border rounded-lg p-6 hover:border-ctaGreen transition-colors duration-300"
               >
                 <div className="flex items-start gap-4 mb-4">
                   <Link href={`/profile/${item.user_id}`}>
-                    <Avatar className="w-12 h-12 border-2 border-transparent hover:border-[#21C55D] transition-colors">
+                    <Avatar className="w-12 h-12 border-2 border-transparent hover:border-ctaGreen transition-colors">
                       <AvatarImage src={item.profile.avatar_url || ''} alt={item.profile.twin_name} />
-                      <AvatarFallback className="bg-[#21C55D]/20">
+                      <AvatarFallback className="bg-ctaGreen/20">
                         {item.profile.twin_name[0]?.toUpperCase() || '?'}
                       </AvatarFallback>
                     </Avatar>
@@ -240,7 +176,7 @@ export default function FeedPage() {
                   <div className="flex-1">
                     <Link 
                       href={`/profile/${item.user_id}`}
-                      className="font-semibold hover:text-[#21C55D] transition-colors inline-block"
+                      className="font-semibold hover:text-ctaGreen transition-colors inline-block"
                     >
                       {item.profile.twin_name}
                     </Link>
@@ -253,11 +189,7 @@ export default function FeedPage() {
                     className="text-sm text-gray-400"
                     dateTime={item.created_at}
                   >
-                    {new Date(item.created_at).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
+                    {new Date(item.created_at).toLocaleDateString()}
                   </time>
                 </div>
 

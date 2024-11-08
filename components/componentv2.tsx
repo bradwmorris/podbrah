@@ -92,45 +92,47 @@ export function Componentv2() {
 
   if (isLoading) {
     return (
-      <div className="bg-[#0E1116] text-white min-h-screen font-sans flex flex-col items-center justify-center">
+      <div className="bg-background text-white min-h-screen font-sans flex flex-col items-center justify-center">
         <p>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#0E1116] text-white min-h-screen font-sans flex flex-col">
+    <div className="bg-background text-white min-h-screen font-sans flex flex-col">
       <Header />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="h-screen flex flex-col items-center justify-center space-y-12 text-center px-4 md:px-6">
-          <div className="space-y-8">
-            <h1 className="text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl text-white max-w-4xl mx-auto">
-              Get more from your favourite podcasts.
+        {/* Main Banner */}
+        <div className="h-screen flex flex-col items-center justify-center space-y-8 text-center px-4 md:px-6">
+          <div className="space-y-4">
+            <h1 className="text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl">
+              Nerd out on your favourite podcasts
             </h1>
-            <div className="bg-[#161B22] inline-block rounded-full px-4 py-2">
-              <h2 className="text-[#21C55D] text-xl uppercase tracking-wider">Discover</h2>
-            </div>
+            <p className="text-xl text-gray-400">
+              AI guided podcast exploration for curious humans
+            </p>
             <Button
               variant="default"
-              className="bg-[#21C55D] hover:bg-[#1CA54C] text-white text-lg py-3 px-8 rounded-lg transition-all duration-300"
+              className="bg-ctaGreen hover:bg-ctaGreenDark text-white text-lg py-3 px-8 rounded-lg transition-all duration-300"
               onClick={scrollToPodcasts}
             >
-              Trending Podcasts
+              Sign up or Sign in
             </Button>
           </div>
         </div>
 
-        <div ref={podcastsRef} className="px-4 md:px-6 py-12 flex flex-col items-center bg-[#0E1116]">
-          <div className="bg-[#161B22] inline-block rounded-full px-4 py-2 mb-8">
-            <h2 className="text-[#21C55D] text-2xl uppercase tracking-wider">Trending Podcasts</h2>
-          </div>
+        {/* Trending Podcasts */}
+        <div ref={podcastsRef} className="px-4 md:px-6 py-12 flex flex-col items-center bg-background">
+          <h2 className="text-ctaGreen text-2xl uppercase tracking-wider mb-8">
+            Trending Podcasts
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {podcasts.map((podcast) => (
               <button
                 key={podcast.id}
                 onClick={() => handlePodcastClick(podcast.id)}
-                className="text-left rounded-lg overflow-hidden shadow-lg bg-[#161B22] hover:shadow-[0_0_20px_rgba(33,197,93,0.3)] transition-all duration-300 group focus:outline-none"
+                className="text-left rounded-lg overflow-hidden shadow-lg bg-background hover:shadow-[0_0_20px_rgba(29,185,84,0.3)] transition-all duration-300 group focus:outline-none"
               >
                 <div className="relative">
                   <img
@@ -141,7 +143,9 @@ export function Componentv2() {
                   />
                 </div>
                 <div className="p-4">
-                  <h3 className="text-lg font-semibold text-white group-hover:text-[#21C55D]">{podcast.title}</h3>
+                  <h3 className="text-lg font-semibold text-white group-hover:text-ctaGreen">
+                    {podcast.title}
+                  </h3>
                 </div>
               </button>
             ))}

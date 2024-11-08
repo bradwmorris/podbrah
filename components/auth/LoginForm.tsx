@@ -60,7 +60,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto bg-[#161B22] p-8 rounded-lg shadow-lg">
+    <div className="w-full max-w-md mx-auto p-8 rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold text-white mb-6">
         {isSignUp ? 'Create Account' : 'Sign In'}
       </h2>
@@ -72,7 +72,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-[#0E1116] border-none text-white"
+            className="w-full bg-input border-none text-white"
             required
           />
         </div>
@@ -83,7 +83,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-[#0E1116] border-none text-white"
+            className="w-full bg-input border-none text-white"
             required
           />
         </div>
@@ -95,7 +95,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               placeholder="Display Name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full bg-[#0E1116] border-none text-white"
+              className="w-full bg-input border-none text-white"
               required
             />
           </div>
@@ -107,7 +107,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
         <Button
           type="submit"
-          className="w-full bg-[#21C55D] text-white"
+          className="w-full bg-ctaGreen text-white"
           disabled={isLoading || (isSignUp && !displayName)}
         >
           {isLoading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
@@ -116,7 +116,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
         <button
           type="button"
           onClick={() => setIsSignUp(!isSignUp)}
-          className="w-full text-[#21C55D] text-sm mt-4 hover:underline"
+          className="w-full text-ctaGreen text-sm mt-4 hover:underline"
         >
           {isSignUp 
             ? 'Already have an account? Sign in' 

@@ -29,31 +29,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profileCompleted, setProfileCompleted] = useState(false);
-  const isRestoringSession = useRef(false);
-  const initialized = useRef(false);
+  const isMounted = useRef(false);
+  const currentUserId = useRef<string | null>(null);
+  const isInitialized = useRef(false);
 
-  const restoreSession = useCallback(async (force = false) => {
-    if (isRestoringSession.current) return;
-    if (!force && initialized.current) return;
-    
+  const initializeAuth = useCallback(async () => {
+    if (isInitialized.current) return;
     try {
-      isRestoringSession.current = true;
-      
-      // Only show loading on initial load
-      if (!initialized.current) {
-        setIsLoading(true);
-      }
-
+      setIsLoading(true);
       const { data: { session: currentSession }, error } = await supabaseAuth.auth.getSession();
-
+      
       if (error) throw error;
 
-      if (currentSession?.user) {
+      if (currentSession?.user && currentSession.user.id !== currentUserId.current) {
+        currentUserId.current = currentSession.user.id;
         setUser(currentSession.user);
         setSession(currentSession);
 
-        // Only fetch profile if we don't have it yet
-        if (!profileCompleted) {
+        if (isMounted.current) {
           const { data: profile } = await supabaseAuth
             .from('profiles')
             .select('profile_completed')
@@ -62,38 +55,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           setProfileCompleted(!!profile?.profile_completed);
         }
-      } else {
-        setUser(null);
-        setSession(null);
-        setProfileCompleted(false);
       }
     } catch (error) {
-      console.error('Session restoration error:', error);
-      // Only clear state on force restore
-      if (force) {
-        setUser(null);
-        setSession(null);
-        setProfileCompleted(false);
-      }
+      console.error('Auth initialization error:', error);
+      currentUserId.current = null;
+      setUser(null);
+      setSession(null);
     } finally {
-      initialized.current = true;
-      isRestoringSession.current = false;
-      setIsLoading(false);
+      isInitialized.current = true;
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
-  }, [profileCompleted]);
+  }, []);
 
-  // Initial session restore
+  // One-time setup
   useEffect(() => {
-    restoreSession(true);
-  }, [restoreSession]);
+    isMounted.current = true;
+    initializeAuth();
+    return () => {
+      isMounted.current = false;
+    };
+  }, [initializeAuth]);
 
   // Auth state listener
   useEffect(() => {
+    if (!isMounted.current) return;
+
     const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state changed:', event, newSession?.user?.id);
+        console.log('Auth state change:', event, newSession?.user?.id);
 
         if (event === 'SIGNED_OUT') {
+          currentUserId.current = null;
           setUser(null);
           setSession(null);
           setProfileCompleted(false);
@@ -102,28 +96,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        if (newSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user) {
+          // Prevent duplicate state updates
+          if (newSession.user.id === currentUserId.current) {
+            setIsLoading(false);
+            return;
+          }
+
+          setIsLoading(true);
+          currentUserId.current = newSession.user.id;
           setUser(newSession.user);
           setSession(newSession);
 
-          if (event === 'SIGNED_IN') {
-            try {
-              const { data: profile } = await supabaseAuth
-                .from('profiles')
-                .select('profile_completed')
-                .eq('id', newSession.user.id)
-                .single();
+          try {
+            const { data: profile } = await supabaseAuth
+              .from('profiles')
+              .select('profile_completed')
+              .eq('id', newSession.user.id)
+              .single();
 
+            if (isMounted.current) {
               setProfileCompleted(!!profile?.profile_completed);
-
-              if (profile?.profile_completed) {
+              if (event === 'SIGNED_IN' && profile?.profile_completed) {
                 router.push('/profile');
               }
-            } catch (error) {
-              console.error('Profile fetch error:', error);
+            }
+          } catch (error) {
+            console.error('Profile fetch error:', error);
+          } finally {
+            if (isMounted.current) {
+              setIsLoading(false);
             }
           }
-          setIsLoading(false);
         }
       }
     );
@@ -133,24 +137,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [router]);
 
-  // Focus handler with better state preservation
+  // Handle visibility change
   useEffect(() => {
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'visible' && initialized.current) {
-        // Only check session validity, don't reset state
-        supabaseAuth.auth.getSession().then(({ data: { session: currentSession } }) => {
-          if (currentSession?.user && currentSession.user.id !== user?.id) {
-            restoreSession(true);
+    if (typeof window === 'undefined') return;
+    
+    let timeoutId: NodeJS.Timeout;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isInitialized.current) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          // Only check session if we have a current user
+          if (currentUserId.current) {
+            supabaseAuth.auth.getSession().then(({ data: { session: currentSession } }) => {
+              if (!currentSession || currentSession.user?.id !== currentUserId.current) {
+                initializeAuth();
+              }
+            });
           }
-        });
+        }, 100);
       }
-    }
+    };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearTimeout(timeoutId);
     };
-  }, [restoreSession, user?.id]);
+  }, [initializeAuth]);
+
+  const signOut = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabaseAuth.auth.signOut();
+      if (error) throw error;
+
+      currentUserId.current = null;
+      setUser(null);
+      setSession(null);
+      setProfileCompleted(false);
+      
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.removeItem('supabase.auth.token');
+      
+      router.push('/');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    } finally {
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [router]);
 
   const value = {
     user,
@@ -158,23 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     profileCompleted,
     setProfileCompleted,
-    signOut: useCallback(async () => {
-      try {
-        setIsLoading(true);
-        const { error } = await supabaseAuth.auth.signOut();
-        if (error) throw error;
-        setUser(null);
-        setSession(null);
-        setProfileCompleted(false);
-        localStorage.removeItem('supabase.auth.token');
-        sessionStorage.removeItem('supabase.auth.token');
-        router.push('/');
-      } catch (error) {
-        console.error('Sign out error:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }, [router])
+    signOut
   };
 
   return (
