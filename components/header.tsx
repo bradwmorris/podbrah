@@ -2,8 +2,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { LogOutIcon } from 'lucide-react';
 
 type HeaderProps = {
   showFullNav?: boolean;
@@ -11,6 +12,7 @@ type HeaderProps = {
 
 export default function Header({ showFullNav = true }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, signOut, isLoading } = useAuth();
 
   const handleSignOut = async () => {
@@ -49,29 +51,37 @@ export default function Header({ showFullNav = true }: HeaderProps) {
             <>
               <Link
                 href="/feed"
-                className="text-white text-sm px-4 py-2 rounded bg-ctaGreen hover:bg-ctaGreenDark"
+                className={`text-white text-sm px-4 py-2 rounded border border-white transition-colors ${
+                  pathname === '/feed' 
+                    ? 'border-ctaGreen text-ctaGreen' 
+                    : 'hover:border-ctaGreen hover:text-ctaGreen'
+                }`}
               >
                 Feed
               </Link>
               <Link
                 href="/profile"
-                className="text-white text-sm px-4 py-2 rounded bg-ctaGreen hover:bg-ctaGreenDark"
+                className={`text-white text-sm px-4 py-2 rounded border border-white transition-colors ${
+                  pathname === '/profile' 
+                    ? 'border-ctaGreen text-ctaGreen' 
+                    : 'hover:border-ctaGreen hover:text-ctaGreen'
+                }`}
               >
                 Profile
               </Link>
               <button
                 onClick={handleSignOut}
-                className="text-white text-sm px-4 py-2 rounded bg-red-500 hover:bg-red-600 disabled:opacity-50"
+                className="text-white hover:text-ctaGreen transition-colors"
                 disabled={isLoading}
               >
-                {isLoading ? 'Signing out...' : 'Sign Out'}
+                <LogOutIcon className="h-6 w-6" />
               </button>
             </>
           )}
           {!isLoading && !user && (
             <Link
               href="/auth/login"
-              className="text-white text-sm px-4 py-2 rounded bg-ctaGreen hover:bg-ctaGreenDark"
+              className="text-white text-sm px-4 py-2 rounded border border-white hover:border-ctaGreen hover:text-ctaGreen transition-colors"
             >
               Sign In
             </Link>

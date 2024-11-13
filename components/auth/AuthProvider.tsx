@@ -1,6 +1,7 @@
+// components/auth/AuthProvider.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabaseAuth } from '@/lib/supabaseAuth';
 import { useRouter } from 'next/navigation';
@@ -29,104 +30,98 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profileCompleted, setProfileCompleted] = useState(false);
-  const isMounted = useRef(false);
-  const currentUserId = useRef<string | null>(null);
-  const isInitialized = useRef(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const checkProfile = useCallback(async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabaseAuth
+        .from('profiles')
+        .select('profile_completed')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      return !!profile?.profile_completed;
+    } catch (error) {
+      console.error('Error checking profile:', error);
+      return false;
+    }
+  }, []);
 
   const initializeAuth = useCallback(async () => {
-    if (isInitialized.current) return;
     try {
-      setIsLoading(true);
+      console.log('Initializing auth...');
       const { data: { session: currentSession }, error } = await supabaseAuth.auth.getSession();
-      
+
       if (error) throw error;
 
-      if (currentSession?.user && currentSession.user.id !== currentUserId.current) {
-        currentUserId.current = currentSession.user.id;
+      if (currentSession?.user) {
+        const isProfileCompleted = await checkProfile(currentSession.user.id);
+        
         setUser(currentSession.user);
         setSession(currentSession);
+        setProfileCompleted(isProfileCompleted);
 
-        if (isMounted.current) {
-          const { data: profile } = await supabaseAuth
-            .from('profiles')
-            .select('profile_completed')
-            .eq('id', currentSession.user.id)
-            .single();
-
-          setProfileCompleted(!!profile?.profile_completed);
+        // Handle routing based on profile completion
+        if (!isProfileCompleted && window.location.pathname !== '/complete-profile') {
+          router.push('/complete-profile');
+        } else if (isProfileCompleted && window.location.pathname === '/complete-profile') {
+          router.push('/profile');
         }
       }
     } catch (error) {
       console.error('Auth initialization error:', error);
-      currentUserId.current = null;
       setUser(null);
       setSession(null);
+      setProfileCompleted(false);
     } finally {
-      isInitialized.current = true;
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
+      setIsInitialized(true);
     }
-  }, []);
+  }, [checkProfile, router]);
 
-  // One-time setup
+  // Initial auth check
   useEffect(() => {
-    isMounted.current = true;
     initializeAuth();
-    return () => {
-      isMounted.current = false;
-    };
   }, [initializeAuth]);
 
   // Auth state listener
   useEffect(() => {
-    if (!isMounted.current) return;
+    if (!isInitialized) return;
 
     const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('Auth state change:', event, newSession?.user?.id);
+        console.log('Auth state change:', event);
 
         if (event === 'SIGNED_OUT') {
-          currentUserId.current = null;
           setUser(null);
           setSession(null);
           setProfileCompleted(false);
           setIsLoading(false);
-          router.push('/');
+          router.push('/auth/login');
           return;
         }
 
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user) {
-          // Prevent duplicate state updates
-          if (newSession.user.id === currentUserId.current) {
-            setIsLoading(false);
-            return;
-          }
-
           setIsLoading(true);
-          currentUserId.current = newSession.user.id;
-          setUser(newSession.user);
-          setSession(newSession);
-
           try {
-            const { data: profile } = await supabaseAuth
-              .from('profiles')
-              .select('profile_completed')
-              .eq('id', newSession.user.id)
-              .single();
+            const isProfileCompleted = await checkProfile(newSession.user.id);
+            
+            setUser(newSession.user);
+            setSession(newSession);
+            setProfileCompleted(isProfileCompleted);
 
-            if (isMounted.current) {
-              setProfileCompleted(!!profile?.profile_completed);
-              if (event === 'SIGNED_IN' && profile?.profile_completed) {
+            if (event === 'SIGNED_IN') {
+              if (isProfileCompleted) {
                 router.push('/profile');
+              } else {
+                router.push('/complete-profile');
               }
             }
           } catch (error) {
-            console.error('Profile fetch error:', error);
+            console.error('Profile check error:', error);
           } finally {
-            if (isMounted.current) {
-              setIsLoading(false);
-            }
+            setIsLoading(false);
           }
         }
       }
@@ -135,72 +130,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]);
-
-  // Handle visibility change
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    let timeoutId: NodeJS.Timeout;
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isInitialized.current) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          // Only check session if we have a current user
-          if (currentUserId.current) {
-            supabaseAuth.auth.getSession().then(({ data: { session: currentSession } }) => {
-              if (!currentSession || currentSession.user?.id !== currentUserId.current) {
-                initializeAuth();
-              }
-            });
-          }
-        }, 100);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearTimeout(timeoutId);
-    };
-  }, [initializeAuth]);
+  }, [isInitialized, router, checkProfile]);
 
   const signOut = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { error } = await supabaseAuth.auth.signOut();
-      if (error) throw error;
-
-      currentUserId.current = null;
-      setUser(null);
-      setSession(null);
-      setProfileCompleted(false);
-      
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-      
-      router.push('/');
+      await supabaseAuth.auth.signOut();
+      router.push('/auth/login');
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
-      if (isMounted.current) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [router]);
 
-  const value = {
-    user,
-    session,
-    isLoading,
-    profileCompleted,
-    setProfileCompleted,
-    signOut
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isLoading,
+        profileCompleted,
+        setProfileCompleted,
+        signOut
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

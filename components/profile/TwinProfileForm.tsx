@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { supabaseAuth } from '@/lib/supabaseAuth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { v4 as uuidv4 } from 'uuid'; // For generating unique filenames
+import { v4 as uuidv4 } from 'uuid';
+import { UserCircle2 } from 'lucide-react';
 
 export default function TwinProfileForm() {
   const router = useRouter();
@@ -16,17 +17,14 @@ export default function TwinProfileForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Handle twin name change
   const handleTwinNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTwinName(e.target.value);
   };
 
-  // Handle avatar file selection
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
-      // Validate file type and size
       const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
       const maxSize = 5 * 1024 * 1024; // 5MB
 
@@ -52,12 +50,10 @@ export default function TwinProfileForm() {
     setIsLoading(true);
 
     try {
-      // Validate twin name
       if (!twinName.trim()) {
         throw new Error('Please provide a name for your Digital Twin.');
       }
 
-      // Fetch the authenticated user
       const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
       if (userError || !user) {
         throw new Error('User not authenticated.');
@@ -68,12 +64,9 @@ export default function TwinProfileForm() {
       }
 
       const userId = user.id;
-
-      // Generate a unique filename within the user's directory
       const fileExtension = avatarFile.name.split('.').pop() || 'png';
-      const uniqueFilename = `${userId}/${uuidv4()}.${fileExtension}`; // e.g., "user-id/uuid.png"
+      const uniqueFilename = `${userId}/${uuidv4()}.${fileExtension}`;
 
-      // Upload the avatar image to Supabase Storage
       const { error: uploadError } = await supabaseAuth.storage
         .from('avatars')
         .upload(uniqueFilename, avatarFile, {
@@ -83,7 +76,6 @@ export default function TwinProfileForm() {
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL of the uploaded image
       const { data: publicUrlData } = supabaseAuth.storage
         .from('avatars')
         .getPublicUrl(uniqueFilename);
@@ -94,21 +86,17 @@ export default function TwinProfileForm() {
 
       const avatarURL = publicUrlData.publicUrl;
 
-      // Update the profiles table with the avatar URL, twin_name, and set profile_completed to true
       const { error: updateError } = await supabaseAuth
         .from('profiles')
         .update({ 
           avatar_url: avatarURL,
           twin_name: twinName.trim(),
-          profile_completed: true // Set to true after completing profile
+          profile_completed: true
         })
         .eq('id', userId);
 
       if (updateError) throw updateError;
 
-      alert('Profile updated successfully!');
-      
-      // Redirect to the profile page
       router.push('/profile');
     } catch (error: any) {
       console.error('Profile update error:', error);
@@ -119,45 +107,52 @@ export default function TwinProfileForm() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto bg-[#161B22] p-8 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold text-white mb-6">
-        Design your Digital Twin
+    <div className="w-full max-w-md mx-auto">
+      {/* Empty Avatar Display */}
+      <div className="flex justify-center mb-8">
+        {avatarPreview ? (
+          <img
+            src={avatarPreview}
+            alt="Avatar Preview"
+            className="w-32 h-32 rounded-full border-2 border-ctaGreen object-cover"
+          />
+        ) : (
+          <div className="w-32 h-32 rounded-full border-2 border-ctaGreen/50 flex items-center justify-center bg-background">
+            <UserCircle2 className="w-24 h-24 text-ctaGreen/30" />
+          </div>
+        )}
+      </div>
+
+      <h2 className="text-4xl font-bold text-white text-center mb-8">
+        Design your AI-Powered Podcast Twin
       </h2>
-      <p className="text-white mb-6">
-        Think of your digital twin as a digital podcast sherpa. They will be a clone of your brain and best ideas. They will guide you through your favourite podcasts extracting the biggest, most relevant ideas. They will hunt down the best podcasts while you sleep. They will help connect you with other curious humans who love nerding out on the same podcasts as you.
-      </p>
       
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="twinName" className="block text-white mb-2">Give your Digital Twin a name</label>
+          <label htmlFor="twinName" className="block text-white mb-2">Name your Twin</label>
           <Input
             id="twinName"
             type="text"
             placeholder="Give your Digital Twin a name"
             value={twinName}
             onChange={handleTwinNameChange}
-            className="w-full bg-[#0E1116] border-none text-white"
+            className="w-full bg-input border-none text-white"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="avatar" className="block text-white mb-2">Upload an image for your Digital Twin</label>
-          <input
-            id="avatar"
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarChange}
-            className="w-full text-white bg-[#0E1116] border-none"
-            required
-          />
-          {avatarPreview && (
-            <img
-              src={avatarPreview}
-              alt="Avatar Preview"
-              className="mt-4 w-24 h-24 object-cover rounded-full"
+          <label htmlFor="avatar" className="block text-white mb-2">Choose a pic for your twin</label>
+          <div className="bg-input rounded-md p-2">
+            <input
+              id="avatar"
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="w-full text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-ctaGreen file:text-white hover:file:bg-ctaGreen/90"
+              required
             />
-          )}
+          </div>
         </div>
 
         {error && (
@@ -166,11 +161,15 @@ export default function TwinProfileForm() {
 
         <Button
           type="submit"
-          className="w-full bg-[#21C55D] text-white"
+          className="w-full bg-ctaGreen text-white py-6 text-lg hover:bg-ctaGreen/90 transition-colors"
           disabled={isLoading || !avatarFile || !twinName.trim()}
         >
-          {isLoading ? 'Uploading...' : 'Upload Avatar'}
+          {isLoading ? 'Creating...' : 'Create Your Digital Twin'}
         </Button>
+
+        <p className="text-ctaGreen text-sm text-center mt-6 leading-relaxed">
+          They will get to know you, your quirks, your best and brightest ideas. They will guide you through your favourite podcasts, extracting the most goodness. They will find you new podcasts, new material, and help you connect with other curious humans who love nerding out over the same conversations.
+        </p>
       </form>
     </div>
   );

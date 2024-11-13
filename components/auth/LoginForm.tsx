@@ -16,9 +16,9 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEmailSent, setIsEmailSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,29 +27,67 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
     try {
       if (isSignUp) {
-        const { error: signUpError } = await supabaseAuth.auth.signUp({
+        // Handle Sign Up
+        const { data, error: signUpError } = await supabaseAuth.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
-            data: {
-              display_name: displayName
-            }
           }
         });
+        
         if (signUpError) throw signUpError;
-        alert('Check your email for the confirmation link!');
+        
+        // Create initial profile
+        if (data.user) {
+          try {
+            await supabaseAuth.from('profiles').insert([
+              { 
+                id: data.user.id,
+                email: data.user.email,
+                profile_completed: false
+              }
+            ]);
+          } catch (profileError) {
+            console.error('Profile creation error:', profileError);
+          }
+        }
 
-        // **Removed the manual redirect**
+        setIsEmailSent(true);
+        
       } else {
-        const { error } = await supabaseAuth.auth.signInWithPassword({
+        // Handle Sign In
+        const { error: signInError, data: signInData } = await supabaseAuth.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
         
-        // Redirect to profile page after successful login
-        router.push('/profile');
+        if (signInError) throw signInError;
+
+        if (signInData.session) {
+          // Check if profile exists
+          const { data: profile } = await supabaseAuth
+            .from('profiles')
+            .select('profile_completed')
+            .eq('id', signInData.session.user.id)
+            .single();
+
+          if (!profile) {
+            // Create profile if it doesn't exist
+            await supabaseAuth.from('profiles').insert([
+              {
+                id: signInData.session.user.id,
+                email: signInData.session.user.email,
+                profile_completed: false
+              }
+            ]);
+            router.push('/complete-profile');
+          } else if (!profile.profile_completed) {
+            router.push('/complete-profile');
+          } else {
+            router.push('/profile');
+          }
+        }
       }
     } catch (error: any) {
       console.error('Auth error:', error);
@@ -58,6 +96,26 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
       setIsLoading(false);
     }
   };
+
+  if (isEmailSent) {
+    return (
+      <div className="w-full max-w-md mx-auto p-8 rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold text-white mb-6">Check Your Email</h2>
+        <p className="text-gray-300 mb-4">
+          Please check your email for a confirmation link to complete your registration.
+        </p>
+        <Button
+          onClick={() => {
+            setIsEmailSent(false);
+            setIsSignUp(false);
+          }}
+          className="w-full bg-ctaGreen text-white"
+        >
+          Return to Login
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto p-8 rounded-lg shadow-lg">
@@ -88,19 +146,6 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           />
         </div>
 
-        {isSignUp && (
-          <div>
-            <Input
-              type="text"
-              placeholder="Display Name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full bg-input border-none text-white"
-              required
-            />
-          </div>
-        )}
-
         {error && (
           <p className="text-red-500 text-sm">{error}</p>
         )}
@@ -108,7 +153,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
         <Button
           type="submit"
           className="w-full bg-ctaGreen text-white"
-          disabled={isLoading || (isSignUp && !displayName)}
+          disabled={isLoading}
         >
           {isLoading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
         </Button>

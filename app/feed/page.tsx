@@ -6,22 +6,46 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { supabaseAuth } from '@/lib/supabaseAuth';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Header from '@/components/header';
-import Link from 'next/link';
-
-interface Profile {
-  id: string;
-  twin_name: string;
-  avatar_url: string | null;
-}
+import { Quote } from 'lucide-react';
 
 interface FeedItem {
   id: number;
   user_id: string;
-  user_interpretation: string;
-  created_at: string;
+  podcast_id: number;
   podcast_title: string;
-  profile: Profile;
+  twin_name: string;
+  avatar_url: string | null;
+  created_at: string;
+  why_listen: string;
+  podcast_link: string;
 }
+
+const extractYouTubeId = (url: string): string | null => {
+  try {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/,
+      /^[a-zA-Z0-9_-]{11}$/
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error extracting YouTube ID:', error);
+    return null;
+  }
+};
+
+const getPodcastThumbnail = (podcastLink: string): string | null => {
+  if (!podcastLink) return null;
+  const youtubeId = extractYouTubeId(podcastLink);
+  return youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null;
+};
 
 export default function FeedPage() {
   const router = useRouter();
@@ -35,17 +59,14 @@ export default function FeedPage() {
   useEffect(() => {
     if (authLoading) return;
     
-    // Handle the case where user is not authenticated
     if (!user) {
       router.push('/auth/login');
       return;
     }
 
-    // Guard against performing operations with null user
     const userId = user?.id;
     if (!userId) return;
 
-    // Prevent duplicate fetches
     if (isInitialized.current && userId === currentUserId.current) {
       return;
     }
@@ -54,41 +75,13 @@ export default function FeedPage() {
       try {
         setLoading(true);
         const { data, error: queryError } = await supabaseAuth
-          .from('user_ideas')
-          .select(`
-            id,
-            user_id,
-            user_interpretation,
-            created_at,
-            podcast_id,
-            profiles (
-              id,
-              twin_name,
-              avatar_url
-            ),
-            overview_embed (
-              id,
-              metadata
-            )
-          `)
+          .from('feed')
+          .select('*')
           .order('created_at', { ascending: false });
 
         if (queryError) throw queryError;
-
-        const formattedData = data?.map((item: any) => ({
-          id: item.id,
-          user_id: item.user_id,
-          user_interpretation: item.user_interpretation,
-          created_at: item.created_at,
-          podcast_title: item.overview_embed?.[0]?.metadata?.podcast_title || 'Unknown Podcast',
-          profile: {
-            id: item.profiles?.[0]?.id || 'unknown',
-            twin_name: item.profiles?.[0]?.twin_name || 'Unknown User',
-            avatar_url: item.profiles?.[0]?.avatar_url
-          }
-        })) || [];
-
-        setFeedItems(formattedData);
+        if (data) setFeedItems(data);
+        
         currentUserId.current = userId;
         isInitialized.current = true;
       } catch (err) {
@@ -107,9 +100,7 @@ export default function FeedPage() {
       <div className="min-h-screen bg-background text-white flex flex-col">
         <Header />
         <div className="flex items-center justify-center flex-1">
-          <div className="animate-pulse text-lg">
-            Loading feed...
-          </div>
+          <div className="animate-pulse text-lg">Loading feed...</div>
         </div>
       </div>
     );
@@ -148,54 +139,96 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-background text-white flex flex-col">
       <Header />
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Friends Feed</h1>
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
+        <h1 className="text-4xl font-bold mb-8 text-white text-center">
+          Friends Feed
+        </h1>
         
-        <div className="space-y-6">
+        <div className="space-y-8">
           {feedItems.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-400 text-lg">No ideas shared yet.</p>
               <p className="text-gray-500 mt-2">Be the first to share your thoughts!</p>
             </div>
           ) : (
-            feedItems.map((item) => (
-              <div
-                key={item.id}
-                className="bg-border rounded-lg p-6 hover:border-ctaGreen transition-colors duration-300"
-              >
-                <div className="flex items-start gap-4 mb-4">
-                  <Link href={`/profile/${item.user_id}`}>
-                    <Avatar className="w-12 h-12 border-2 border-transparent hover:border-ctaGreen transition-colors">
-                      <AvatarImage src={item.profile.avatar_url || ''} alt={item.profile.twin_name} />
-                      <AvatarFallback className="bg-ctaGreen/20">
-                        {item.profile.twin_name[0]?.toUpperCase() || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Link>
-                  
-                  <div className="flex-1">
-                    <Link 
-                      href={`/profile/${item.user_id}`}
-                      className="font-semibold hover:text-ctaGreen transition-colors inline-block"
-                    >
-                      {item.profile.twin_name}
-                    </Link>
-                    <p className="text-sm text-gray-400">
-                      From podcast: {item.podcast_title}
-                    </p>
-                  </div>
-                  
-                  <time 
-                    className="text-sm text-gray-400"
-                    dateTime={item.created_at}
-                  >
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </time>
-                </div>
+            feedItems.map((item) => {
+              const thumbnailUrl = getPodcastThumbnail(item.podcast_link);
+              
+              return (
+                <div
+                  key={item.id}
+                  className="border border-white/10 rounded-xl p-6 hover:border-ctaGreen/50 transition-all duration-300 backdrop-blur-sm"
+                >
+                  <div className="space-y-6">
+                    {/* User Info - Removed Links */}
+                    <div className="flex items-start gap-4">
+                      <Avatar className="w-16 h-16 border-2 border-transparent">
+                        <AvatarImage src={item.avatar_url || ''} alt={item.twin_name} />
+                        <AvatarFallback className="bg-gradient-to-br from-ctaGreen/20 to-blue-500/20 text-xl">
+                          {item.twin_name[0]?.toUpperCase() || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1 pt-1">
+                        <span className="text-xl font-bold text-white">
+                          {item.twin_name}
+                        </span>
+                        <p className="text-sm text-gray-400 mt-1">
+                          {item.podcast_title}
+                        </p>
+                        <time 
+                          className="text-sm text-gray-500 block mt-1"
+                          dateTime={item.created_at}
+                        >
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </time>
+                      </div>
+                    </div>
 
-                <p className="text-gray-200 leading-relaxed">{item.user_interpretation}</p>
-              </div>
-            ))
+                    {/* Content - Quote Style */}
+                    <div className="relative">
+                      <Quote className="absolute text-ctaGreen/20 w-12 h-12 -left-2 -top-2" />
+                      <div className="relative z-10 pl-8">
+                        <p className="text-2xl font-light text-gray-200 leading-relaxed italic">
+                          "{item.why_listen}"
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Thumbnail */}
+                    {thumbnailUrl && (
+                      <div className="w-full mt-6">
+                        <img
+                          src={thumbnailUrl}
+                          alt={item.podcast_title}
+                          className="w-full h-48 object-cover rounded-lg"
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            if (img.src.includes('maxresdefault')) {
+                              img.src = img.src.replace('maxresdefault', 'hqdefault');
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Action Button */}
+                    <div className="flex justify-end pt-2">
+                      {item.podcast_link && (
+                        <a
+                          href={item.podcast_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-ctaGreen hover:text-white transition-colors"
+                        >
+                          Listen to the podcast →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </main>

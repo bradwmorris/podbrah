@@ -1,4 +1,3 @@
-// app/simulate/overview/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -6,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import Header from '@/components/header';
-import { X } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
 import { supabaseAuth } from '@/lib/supabaseAuth';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from '@/components/auth/AuthProvider';
 import Chat from './chat';
 
 interface Theme {
@@ -18,46 +19,75 @@ interface Theme {
 }
 
 interface PodcastOverview {
-  featuring: string;
-  podcast_id: number;
-  podcast_title: string;
-  number_of_themes: number;
-  podcast_overview: string;
-  themes: Theme[];
+  metadata: {
+    featuring: string;
+    podcast_id: number;
+    podcast_title: string;
+    number_of_themes: number;
+    podcast_overview: string;
+    thumbnail_url: string;
+    themes: Theme[];
+  }
+}
+
+interface Profile {
+  name: string;
+  twin_name: string;
+  avatar_url: string | null;
 }
 
 function OverviewContent() {
   const [podcastOverview, setPodcastOverview] = useState<PodcastOverview | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<Theme | null>(null);
   const [selectedThemes, setSelectedThemes] = useState<number[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [showCards, setShowCards] = useState(false);
+  const [typedText, setTypedText] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [podcastTitle, setPodcastTitle] = useState<string | null>(null);
+  const { user } = useAuth();
 
+  // Get stored thumbnail and title
   useEffect(() => {
-    const fetchOverview = async () => {
+    const storedThumbnail = localStorage.getItem('podcast_thumbnail');
+    const storedTitle = localStorage.getItem('podcast_title');
+    if (storedThumbnail) setThumbnailUrl(storedThumbnail);
+    if (storedTitle) setPodcastTitle(storedTitle);
+  }, []);
+
+  // Load profile and podcast data
+  useEffect(() => {
+    const loadProfileAndOverview = async () => {
       try {
         const podcastId = localStorage.getItem('podcast_id');
-        if (!podcastId) {
-          setError('Podcast ID is missing.');
+        if (!user || !podcastId) {
+          setError('Missing required information.');
           setLoading(false);
           return;
         }
 
-        const { data, error } = await supabaseAuth
-          .from('overview_embed')
-          .select('metadata')
-          .eq('metadata->>podcast_id', podcastId)
-          .single();
+        const [profileResponse, overviewResponse] = await Promise.all([
+          supabaseAuth
+            .from('profiles')
+            .select('name, twin_name, avatar_url')
+            .eq('id', user.id)
+            .single(),
+          
+          supabaseAuth
+            .from('overview_embed')
+            .select('metadata')
+            .eq('metadata->>podcast_id', podcastId)
+            .single()
+        ]);
 
-        if (error || !data) {
-          setError('Failed to fetch overview data.');
-          setLoading(false);
-          return;
-        }
+        if (profileResponse.error) throw profileResponse.error;
+        if (overviewResponse.error) throw overviewResponse.error;
 
-        setPodcastOverview(data.metadata as PodcastOverview);
+        setProfile(profileResponse.data);
+        setPodcastOverview(overviewResponse.data as PodcastOverview);
       } catch (err: any) {
         console.error(err);
         setError(err.message || 'An unexpected error occurred.');
@@ -66,9 +96,29 @@ function OverviewContent() {
       }
     };
 
-    fetchOverview();
-  }, []);
+    loadProfileAndOverview();
+  }, [user]);
 
+  // Typing animation effect
+  useEffect(() => {
+    if (podcastOverview && !showChat && !showCards) {
+      const heading = "wtf was this podcast all about?";
+      let i = 1;
+      setTypedText(heading[0]);
+      const typingInterval = setInterval(() => {
+        if (i < heading.length) {
+          setTypedText(prev => heading.substring(0, i + 1));
+          i++;
+        } else {
+          clearInterval(typingInterval);
+        }
+      }, 50);
+
+      return () => clearInterval(typingInterval);
+    }
+  }, [podcastOverview, showChat, showCards]);
+
+  // Event Handlers and Helper Functions
   const handleCardClick = (theme: Theme) => {
     setSelectedTheme(theme);
   };
@@ -83,7 +133,7 @@ function OverviewContent() {
 
   const getSelectedThemeObjects = (): Theme[] => {
     if (!podcastOverview) return [];
-    return podcastOverview.themes.filter(theme => 
+    return podcastOverview.metadata.themes.filter(theme => 
       selectedThemes.includes(theme.chapter_number)
     );
   };
@@ -98,7 +148,7 @@ function OverviewContent() {
 
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#0E1116] text-white font-sans">
+      <div className="flex flex-col min-h-screen bg-background text-white font-sans">
         <Header showFullNav={false} />
         <main className="flex-1 flex items-center justify-center">
           <p>Loading overview...</p>
@@ -109,7 +159,7 @@ function OverviewContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#0E1116] text-white font-sans">
+      <div className="flex flex-col min-h-screen bg-background text-white font-sans">
         <Header showFullNav={false} />
         <main className="flex-1 flex items-center justify-center">
           <p className="text-red-500">{error}</p>
@@ -118,9 +168,9 @@ function OverviewContent() {
     );
   }
 
-  if (!podcastOverview) {
+  if (!podcastOverview || !profile) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#0E1116] text-white font-sans">
+      <div className="flex flex-col min-h-screen bg-background text-white font-sans">
         <Header showFullNav={false} />
         <main className="flex-1 flex items-center justify-center">
           <p>No overview available.</p>
@@ -130,39 +180,107 @@ function OverviewContent() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0E1116] text-white font-sans">
+    <div className="flex flex-col min-h-screen bg-background text-white font-sans">
       <Header showFullNav={false} />
-      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
-        {!showCards && !showChat ? (
-          <div className="w-full max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-8">{podcastOverview.podcast_title}</h1>
-            <p className="text-gray-300 text-lg mb-12 leading-relaxed">
-              {podcastOverview.podcast_overview}
-            </p>
-            <Button
-              onClick={() => setShowCards(true)}
-              className="bg-[#21C55D] text-white py-3 px-6 rounded-lg hover:bg-[#1CA54C] transition-colors duration-200 text-lg"
-            >
-              Explore Themes
-            </Button>
+      {!showCards && !showChat ? (
+        // First View - Centered Overview
+        <main className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8">
+          <div className="w-full max-w-4xl mx-auto">
+            <div className="flex items-start space-x-6">
+              <div className="flex-shrink-0">
+                <Avatar className="w-20 h-20 border-2 border-ctaGreen">
+                  <AvatarImage src={profile.avatar_url || ''} alt={profile.twin_name} />
+                  <AvatarFallback>{profile.twin_name[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </div>
+              
+              <div className="relative flex-grow bg-[#1E1E1E] rounded-2xl p-8 shadow-lg">
+                <div className="absolute left-0 top-8 -translate-x-2">
+                  <div className="w-4 h-4 bg-[#1E1E1E] transform rotate-45" />
+                </div>
+                
+                <div className="space-y-6">
+                  <h1 className="text-4xl font-bold tracking-tight text-white">
+                    {typedText}
+                  </h1>
+                  {thumbnailUrl && (
+                    <div className="w-full rounded-lg overflow-hidden">
+                      <img 
+                        src={thumbnailUrl}
+                        alt={podcastTitle || "Podcast thumbnail"}
+                        className="w-full h-48 object-cover rounded-lg"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          if (img.src.includes('maxresdefault')) {
+                            img.src = img.src.replace('maxresdefault', 'hqdefault');
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                  <h2 className="text-2xl font-semibold text-ctaGreen">
+                    {podcastTitle || podcastOverview.metadata.podcast_title}
+                  </h2>
+                  <p className="text-lg leading-relaxed text-gray-200">
+                    {podcastOverview.metadata.podcast_overview}
+                  </p>
+                  <div className="flex justify-end pt-4">
+                    <Button
+                      onClick={() => setShowCards(true)}
+                      className="bg-ctaGreen hover:bg-ctaGreen/90 text-white px-8 py-6 text-lg rounded-xl 
+                                flex items-center space-x-2 transition-all duration-200 transform hover:translate-x-1"
+                    >
+                      <span>Explore Themes</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : showChat ? (
-          <Chat 
-            podcastId={podcastOverview.podcast_id} 
-            podcastTitle={podcastOverview.podcast_title}
-            selectedThemes={getSelectedThemeObjects()}
-          />
-        ) : (
+        </main>
+      ) : showChat ? (
+        <Chat 
+          podcastId={podcastOverview.metadata.podcast_id} 
+          podcastTitle={podcastTitle || podcastOverview.metadata.podcast_title}
+          selectedThemes={getSelectedThemeObjects()}
+        />
+      ) : (
+        // Second View - Theme Cards with Avatar Header
+        <main className="flex-1 flex flex-col p-4 sm:p-6 md:p-8">
           <div className="w-full max-w-7xl mx-auto">
-            <p className="text-[#21C55D] text-xl mb-8 text-center">
-              We've extracted {podcastOverview.number_of_themes} themes from this conversation. 'view details' for more information, ☑ to select themes you'd like to explore further. 
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {podcastOverview.themes.map((theme) => (
+            {/* Theme Introduction with Avatar */}
+            <div className="flex items-start space-x-6 mb-12">
+              <div className="flex-shrink-0">
+                <Avatar className="w-20 h-20 border-2 border-ctaGreen">
+                  <AvatarImage src={profile.avatar_url || ''} alt={profile.twin_name} />
+                  <AvatarFallback>{profile.twin_name[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </div>
+              
+              <div className="relative flex-grow bg-[#1E1E1E] rounded-2xl p-6 shadow-lg">
+                <div className="absolute left-0 top-8 -translate-x-2">
+                  <div className="w-4 h-4 bg-[#1E1E1E] transform rotate-45" />
+                </div>
+                
+                <div className="space-y-4">
+                  <p className="text-xl text-gray-200">
+                    I've extracted <span className="text-ctaGreen font-semibold">{podcastOverview.metadata.number_of_themes}</span> key themes from this conversation. 
+                    Click 'view details' to learn more about each theme, and use the checkboxes to select the ones you'd like to explore further together.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Theme Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {podcastOverview.metadata.themes.map((theme) => (
                 <motion.div
                   key={theme.chapter_number}
-                  className={`bg-[#161B22] rounded-lg shadow-md p-6 cursor-pointer ${
-                    selectedThemes.includes(theme.chapter_number) ? 'ring-2 ring-[#21C55D]' : ''
+                  className={`relative bg-[#161B22] border border-gray-800 rounded-lg p-6 ${
+                    selectedThemes.includes(theme.chapter_number) 
+                      ? 'ring-1 ring-ctaGreen'
+                      : 'hover:border-gray-700'
                   }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -173,48 +291,52 @@ function OverviewContent() {
                       checked={selectedThemes.includes(theme.chapter_number)}
                       onCheckedChange={() => handleCheckboxChange(theme.chapter_number)}
                       onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      className="mr-2"
+                      className="border-gray-700"
                     />
                     <button
                       onClick={() => handleCardClick(theme)}
-                      className="text-[#21C55D] hover:underline"
+                      className="text-ctaGreen text-sm hover:underline"
                     >
                       View Details
                     </button>
                   </div>
-                  <h2 className="text-xl font-semibold mb-2">{theme.theme_title}</h2>
+                  <h2 className="text-lg font-medium text-gray-200">{theme.theme_title}</h2>
                 </motion.div>
               ))}
             </div>
 
-            <div className="text-center mt-8">
+            {/* Start Button */}
+            <div className="text-center mt-12">
               <Button
                 onClick={handleStartChat}
-                className="bg-[#21C55D] text-white py-2 px-4 rounded-lg hover:bg-[#1CA54C] transition-colors duration-200"
+                className="bg-ctaGreen hover:bg-ctaGreen/90 text-white px-8 py-6 text-lg rounded-xl 
+                          flex items-center space-x-2 transition-all duration-200 transform hover:translate-x-1"
                 disabled={selectedThemes.length === 0}
               >
-                Start Theme Exploration ({selectedThemes.length} selected)
+                <span>Start Theme Exploration ({selectedThemes.length} selected)</span>
+                <ArrowRight className="w-5 h-5" />
               </Button>
             </div>
 
+            {/* Theme Details Modal */}
             <AnimatePresence>
               {selectedTheme && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+                  className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
                   onClick={() => setSelectedTheme(null)}
                 >
                   <motion.div
-                    initial={{ scale: 0.8, rotateY: 180 }}
-                    animate={{ scale: 1, rotateY: 0 }}
-                    exit={{ scale: 0.8, rotateY: 180 }}
-                    className="bg-[#161B22] rounded-lg shadow-lg p-8 max-w-2xl w-full"
+                    initial={{ scale: 0.95 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0.95 }}
+                    className="bg-[#161B22] border border-gray-800 rounded-lg p-8 max-w-2xl w-full shadow-xl"
                     onClick={(e: React.MouseEvent) => e.stopPropagation()}
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <h2 className="text-2xl font-bold text-white">{selectedTheme.theme_title}</h2>
+                      <h2 className="text-2xl font-bold text-gray-200">{selectedTheme.theme_title}</h2>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -224,14 +346,14 @@ function OverviewContent() {
                         <X className="h-6 w-6" />
                       </Button>
                     </div>
-                    <p className="text-gray-300">{selectedTheme.theme_gist}</p>
+                    <p className="text-gray-300 leading-relaxed">{selectedTheme.theme_gist}</p>
                   </motion.div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-        )}
-      </main>
+        </main>
+      )}
     </div>
   );
 }

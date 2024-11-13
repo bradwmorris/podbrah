@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import Header from '@/components/header';
+import { Play } from 'lucide-react';
 
 interface Podcast {
   id: string;
@@ -31,48 +32,27 @@ export function Componentv2() {
       router.push('/auth/login');
       return;
     }
-    console.log(`Clicked Podcast ID: ${podcastId}`);
-    localStorage.setItem('podcast_id', podcastId);
-    const storedId = localStorage.getItem('podcast_id');
-    console.log(`Stored podcast_id in localStorage: ${storedId}`);
+    // Find the selected podcast
+    const selectedPodcast = podcasts.find(p => p.id === podcastId);
+    if (selectedPodcast) {
+      // Store both podcast ID and thumbnail
+      localStorage.setItem('podcast_id', podcastId);
+      localStorage.setItem('podcast_thumbnail', selectedPodcast.thumbnail);
+      localStorage.setItem('podcast_title', selectedPodcast.title);
+      console.log('Stored podcast data:', {
+        id: podcastId,
+        thumbnail: selectedPodcast.thumbnail,
+        title: selectedPodcast.title
+      });
+    }
     router.push('/simulate');
   };
 
-  const scrollToPodcasts = () => {
-    podcastsRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const handleStartClick = () => {
+    router.push('/auth/login');
   };
 
   const podcasts: Podcast[] = [
-    {
-      id: '1',
-      title: 'Podcast 1: Your First Podcast Title',
-      thumbnail: 'https://img.youtube.com/vi/oFfVt3S51T4/maxresdefault.jpg',
-    },
-    {
-      id: '2',
-      title: 'Podcast 2: Your Second Podcast Title',
-      thumbnail: 'https://img.youtube.com/vi/I0PLTzeEbtg/maxresdefault.jpg',
-    },
-    {
-      id: '20241014113223',
-      title: 'Podcast 3: Nate Silver - Predicting Elections in Turbulent Times',
-      thumbnail: 'https://img.youtube.com/vi/_6_ZoXadBMk/maxresdefault.jpg',
-    },
-    {
-      id: '20241014171247',
-      title: 'Podcast 4: Your New Podcast Title',
-      thumbnail: 'https://img.youtube.com/vi/ccOFLML25K8/hqdefault.jpg',
-    },
-    {
-      id: '20241015081353',
-      title: "DeepMind's AI Breakthroughs - From AlphaFold to Scientific Discovery",
-      thumbnail: 'https://img.youtube.com/vi/BfDACxrdAvQ/maxresdefault.jpg',
-    },
-    {
-      id: '20241016191212',
-      title: "HeyGen CEO on TikTok's GenAI Dilemma, Navigating Voice-Cloning and the Path to Interactive Avatars",
-      thumbnail: 'https://img.youtube.com/vi/FudGqDZDSx4/maxresdefault.jpg',
-    },
     {
       id: '20241029083036',
       title: "Joscha Bach - Why Your Thoughts Aren't Yours",
@@ -81,7 +61,37 @@ export function Componentv2() {
     {
       id: '20241031095658',
       title: 'Marc Andreessen - AI is Bigger Than the Internet. How AI Will Change EVERYTHING',
-      thumbnail: 'https://img.youtube.com/vi/3MkJEGE9GRY/maxresdefault.jpg',
+      thumbnail: 'https://img.youtube.com/vi/6twxFu3bL0w/maxresdefault.jpg',
+    },
+    {
+      id: '20241110094358',
+      title: 'The Elegant Math Behind Machine Learning',
+      thumbnail: 'https://img.youtube.com/vi/URtF_UHYBSo/maxresdefault.jpg',
+    },
+    {
+      id: '20241110102028',
+      title: 'Elon Musk on Joe Rogan November 24',
+      thumbnail: 'https://img.youtube.com/vi/7qZl_5xHoBw/maxresdefault.jpg',
+    },
+    {
+      id: '20241110110501',
+      title: 'Pattern Recognition vs True Intelligence with Francois Chollet',
+      thumbnail: 'https://img.youtube.com/vi/JTU8Ha4Jyfc/maxresdefault.jpg',
+    },
+    {
+      id: '20241111074933',
+      title: 'The Investing and Crypto Expert Raoul Pal',
+      thumbnail: 'https://img.youtube.com/vi/XyhhwVJB9Z4/maxresdefault.jpg',
+    },
+    {
+      id: '20241111100657',
+      title: 'Esther Perel： How to Find, Build & Maintain Healthy Romantic Relationships',
+      thumbnail: 'https://img.youtube.com/vi/ajneRM-ET1Q/maxresdefault.jpg',
+    },
+    {
+      id: '20241113130212',
+      title: 'YUDKOWSKY + WOLFRAM ON AI RISK',
+      thumbnail: 'https://img.youtube.com/vi/xjH2B_sE_RQ/maxresdefault.jpg',
     },
   ];
 
@@ -107,17 +117,16 @@ export function Componentv2() {
         <div className="h-screen flex flex-col items-center justify-center space-y-8 text-center px-4 md:px-6">
           <div className="space-y-4">
             <h1 className="text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl">
-              Nerd out on your favourite podcasts
+              Nerd out on your favourite podcasts, with your favourite humans
             </h1>
             <p className="text-xl text-gray-400">
-              AI guided podcast exploration for curious humans
+              with a little help from your personally designed AI-powered podcast twin
             </p>
             <Button
-              variant="default"
-              className="bg-ctaGreen hover:bg-ctaGreenDark text-white text-lg py-3 px-8 rounded-lg transition-all duration-300"
-              onClick={scrollToPodcasts}
+              onClick={handleStartClick}
+              className="bg-ctaGreen hover:bg-ctaGreen/90 text-white py-4 px-6 rounded-xl transition-all duration-200 text-lg font-medium shadow-lg hover:shadow-ctaGreen/20"
             >
-              Sign up or Sign in
+              Create your AI-Powered Podcast Twin
             </Button>
           </div>
         </div>
@@ -129,10 +138,9 @@ export function Componentv2() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {podcasts.map((podcast) => (
-              <button
+              <div
                 key={podcast.id}
-                onClick={() => handlePodcastClick(podcast.id)}
-                className="text-left rounded-lg overflow-hidden shadow-lg bg-background hover:shadow-[0_0_20px_rgba(29,185,84,0.3)] transition-all duration-300 group focus:outline-none"
+                className="rounded-xl overflow-hidden bg-background border border-gray-800 hover:border-ctaGreen/30 transition-all duration-300 group"
               >
                 <div className="relative">
                   <img
@@ -141,13 +149,20 @@ export function Componentv2() {
                     onError={handleImageError}
                     className="w-full h-48 object-cover"
                   />
+                  <button
+                    onClick={() => handlePodcastClick(podcast.id)}
+                    className="absolute bottom-4 right-4 bg-ctaGreen hover:bg-ctaGreen/90 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0"
+                  >
+                    <Play size={16} />
+                    Simulate
+                  </button>
                 </div>
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-white group-hover:text-ctaGreen">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-white group-hover:text-ctaGreen transition-colors duration-200">
                     {podcast.title}
                   </h3>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </div>
