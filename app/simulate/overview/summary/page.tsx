@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import Header from '@/components/header';
 import { supabaseAuth } from '@/lib/supabaseAuth';
@@ -24,16 +24,46 @@ interface ProfileData {
   avatar_url: string;
 }
 
-function SummaryContent() {
+// Custom hook for handling search params
+function useResponseParams(): ResponseData | null {
+  const [data, setData] = useState<ResponseData | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const responsesParam = searchParams.get('responses');
+      if (responsesParam) {
+        try {
+          const decodedResponses = decodeURIComponent(responsesParam);
+          const parsedData: ResponseData = JSON.parse(decodedResponses);
+          setData(parsedData);
+        } catch (err) {
+          console.error('Error parsing responses:', err);
+        }
+      }
+    }
+  }, []);
+
+  return data;
+}
+
+export default function SummaryPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user } = useAuth();
+  const responseData = useResponseParams();
   const [themeResponses, setThemeResponses] = useState<ThemeResponse[]>([]);
   const [whyListen, setWhyListen] = useState<string>('');
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (responseData) {
+      setThemeResponses(responseData.themes);
+      setWhyListen(responseData.whyListen);
+    }
+  }, [responseData]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -56,26 +86,6 @@ function SummaryContent() {
 
     loadProfile();
   }, [user]);
-
-  useEffect(() => {
-    try {
-      const responsesParam = searchParams.get('responses');
-      if (!responsesParam) {
-        setError('No responses found.');
-        console.error('No responses parameter found in URL.');
-        return;
-      }
-
-      const decodedResponses = decodeURIComponent(responsesParam);
-      const parsedData: ResponseData = JSON.parse(decodedResponses);
-      setThemeResponses(parsedData.themes);
-      setWhyListen(parsedData.whyListen);
-      console.log('Parsed Responses:', parsedData);
-    } catch (err: any) {
-      console.error('Error parsing summary:', err);
-      setError('Failed to parse responses.');
-    }
-  }, [searchParams]);
 
   const handleSubmit = async () => {
     setError(null);
@@ -182,6 +192,17 @@ function SummaryContent() {
       setIsSubmitting(false);
     }
   };
+
+  if (!responseData) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background text-white font-sans">
+        <Header showFullNav={false} />
+        <main className="flex-1 flex items-center justify-center">
+          <p>Loading...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-white font-sans">
@@ -293,18 +314,5 @@ function SummaryContent() {
         </div>
       </main>
     </div>
-  );
-}
-
-// Main page component
-export default function SummaryPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-white text-lg">Loading...</div>
-      </div>
-    }>
-      <SummaryContent />
-    </Suspense>
   );
 }
