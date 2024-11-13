@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import Header from '@/components/header';
@@ -24,7 +24,7 @@ interface ProfileData {
   avatar_url: string;
 }
 
-export default function SummaryPage() {
+function SummaryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -98,7 +98,6 @@ export default function SummaryPage() {
         return;
       }
 
-      // Updated to fetch podcast_link as well
       const [podcastResponse, profileResponse] = await Promise.all([
         supabaseAuth
           .from('overview_embed')
@@ -144,7 +143,7 @@ export default function SummaryPage() {
         user_id: user.id,
         podcast_id: internalPodcastId,
         podcast_title: podcast_title,
-        podcast_link: podcast_link, // Added podcast_link to feed data
+        podcast_link: podcast_link,
         twin_name: profileData.twin_name,
         avatar_url: profileData.avatar_url,
         why_listen: whyListen,
@@ -213,7 +212,6 @@ export default function SummaryPage() {
             <div className="space-y-6">
               <p className="text-center text-green-500">Your ideas have been successfully saved!</p>
               
-              {/* Why Listen Section */}
               <div className="bg-[#161B22] border border-gray-800 rounded-lg p-6 hover:border-gray-700 transition-colors mb-8">
                 <h2 className="text-lg font-medium text-ctaGreen mb-4">
                   Why Others Should Listen
@@ -221,7 +219,6 @@ export default function SummaryPage() {
                 <p className="text-gray-300">{whyListen}</p>
               </div>
 
-              {/* Theme Responses */}
               <div className="space-y-6">
                 {themeResponses.map((response, index) => (
                   <div 
@@ -254,7 +251,6 @@ export default function SummaryPage() {
                 Ready to share your ideas with other weird humans? 
               </p>
 
-              {/* Why Listen Section */}
               <div className="bg-[#161B22] border border-gray-800 rounded-lg p-6 hover:border-gray-700 transition-colors mb-8">
                 <h2 className="text-lg font-medium text-ctaGreen mb-4">
                   Why Others Should Listen
@@ -262,7 +258,6 @@ export default function SummaryPage() {
                 <p className="text-gray-300">{whyListen}</p>
               </div>
 
-              {/* Theme Responses */}
               {themeResponses.map((response, index) => (
                 <div 
                   key={index} 
@@ -298,5 +293,18 @@ export default function SummaryPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+// Main page component
+export default function SummaryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    }>
+      <SummaryContent />
+    </Suspense>
   );
 }
