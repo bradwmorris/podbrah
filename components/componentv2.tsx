@@ -93,6 +93,11 @@ export function Componentv2() {
       title: 'YUDKOWSKY + WOLFRAM ON AI RISK',
       thumbnail: 'https://img.youtube.com/vi/xjH2B_sE_RQ/maxresdefault.jpg',
     },
+    {
+      id: '20241115090315',
+      title: 'Graham Hancock: Lost Civilization of the Ice Age & Ancient Human History',
+      thumbnail: 'https://img.youtube.com/vi/NMHiLvirCb0/maxresdefault.jpg',
+    },
   ];
 
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
