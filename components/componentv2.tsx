@@ -98,6 +98,11 @@ export function Componentv2() {
       title: 'Graham Hancock: Lost Civilization of the Ice Age & Ancient Human History',
       thumbnail: 'https://img.youtube.com/vi/NMHiLvirCb0/maxresdefault.jpg',
     },
+        {
+      id: '20241115164319',
+      title: 'How Barbara Corcoran Turned $1,000 into a $5B+ Empire',
+      thumbnail: 'https://img.youtube.com/vi/qh5EL9akLX4/maxresdefault.jpg',
+    },
   ];
 
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
