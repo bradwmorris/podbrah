@@ -106,7 +106,7 @@ export function Componentv2() {
     {
       id: '20241115165939',
       title: 'Gwern Branwen - How an Anonymous Researcher Predicted AIs Trajectory',
-      thumbnail: 'https://img.youtube.com/vi/a42key59cZQ&t/maxresdefault.jpg',
+      thumbnail: 'https://img.youtube.com/vi/a42key59cZQ/maxresdefault.jpg',
     },
   ];
 
