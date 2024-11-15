@@ -103,6 +103,11 @@ export function Componentv2() {
       title: 'How Barbara Corcoran Turned $1,000 into a $5B+ Empire',
       thumbnail: 'https://img.youtube.com/vi/qh5EL9akLX4/maxresdefault.jpg',
     },
+    {
+      id: '20241115165939',
+      title: 'Gwern Branwen - How an Anonymous Researcher Predicted AIs Trajectory',
+      thumbnail: 'https://img.youtube.com/vi/a42key59cZQ&t/maxresdefault.jpg',
+    },
   ];
 
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
