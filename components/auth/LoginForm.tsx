@@ -1,4 +1,3 @@
-// components/auth/LoginForm.tsx
 'use client';
 
 import { useState } from 'react';
@@ -16,6 +15,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
@@ -27,12 +27,19 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
     try {
       if (isSignUp) {
+        if (!displayName.trim()) {
+          throw new Error('Display name is required');
+        }
+
         // Handle Sign Up
         const { data, error: signUpError } = await supabaseAuth.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: {
+              display_name: displayName // Add display name to auth metadata
+            }
           }
         });
         
@@ -45,6 +52,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               { 
                 id: data.user.id,
                 email: data.user.email,
+                name: displayName, // Add display name to profiles table
                 profile_completed: false
               }
             ]);
@@ -78,6 +86,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               {
                 id: signInData.session.user.id,
                 email: signInData.session.user.email,
+                name: signInData.session.user.user_metadata.display_name,
                 profile_completed: false
               }
             ]);
@@ -124,6 +133,19 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
       </h2>
       
       <form onSubmit={handleSubmit} className="space-y-4">
+        {isSignUp && (
+          <div>
+            <Input
+              type="text"
+              placeholder="Display Name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full bg-input border-none text-white"
+              required
+            />
+          </div>
+        )}
+        
         <div>
           <Input
             type="email"
@@ -160,7 +182,10 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
         <button
           type="button"
-          onClick={() => setIsSignUp(!isSignUp)}
+          onClick={() => {
+            setIsSignUp(!isSignUp);
+            setDisplayName(''); // Clear display name when switching modes
+          }}
           className="w-full text-ctaGreen text-sm mt-4 hover:underline"
         >
           {isSignUp 

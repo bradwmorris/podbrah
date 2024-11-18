@@ -113,10 +113,9 @@ export default function TwinProfileForm() {
           Design your AI-Powered Podcast Servant
         </h2>
         <p className="text-white mb-8 leading-relaxed">
-          Your digital twin will get to know you and your favourite podcasts. 
-          It will help collect and curate your ideas and share them with others. 
-          Your digital twin will interact with other agents, and search the web for 
-          interesting connections and patterns and report back to you. They will be on dislay for others to see, so set them a cool name and display picture, but make sure your friends know who you are.
+          Your digital twin will get to know you and your favourite podcasts, 
+          help collect and curate your ideas, share them (and connect you) with others. 
+          Select a cool name and picture for them, but make sure your friends know who you are.
         </p>
         <Button
           onClick={() => setShowForm(true)}
