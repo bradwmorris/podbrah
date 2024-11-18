@@ -12,10 +12,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '@/components/auth/AuthProvider';
 import Chat from './chat';
 
+interface BigIdea {
+  title: string;
+  quote: string;
+}
+
 interface Theme {
+  chapter_number: number;
   theme_title: string;
   theme_gist: string;
-  chapter_number: number;
+  metadata?: {
+    theme_gist?: string;
+    simple_breakdown?: string;
+  };
+  big_ideas?: BigIdea[];
+  simple_breakdown?: string;
 }
 
 interface PodcastOverview {
@@ -50,7 +61,6 @@ function OverviewContent() {
   const [podcastTitle, setPodcastTitle] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Get stored thumbnail and title
   useEffect(() => {
     const storedThumbnail = localStorage.getItem('podcast_thumbnail');
     const storedTitle = localStorage.getItem('podcast_title');
@@ -58,7 +68,6 @@ function OverviewContent() {
     if (storedTitle) setPodcastTitle(storedTitle);
   }, []);
 
-  // Load profile and podcast data
   useEffect(() => {
     const loadProfileAndOverview = async () => {
       try {
@@ -86,8 +95,25 @@ function OverviewContent() {
         if (profileResponse.error) throw profileResponse.error;
         if (overviewResponse.error) throw overviewResponse.error;
 
+        const transformedData = {
+          ...overviewResponse.data,
+          metadata: {
+            ...overviewResponse.data.metadata,
+            themes: overviewResponse.data.metadata.themes.map((theme: any) => ({
+              ...theme,
+              big_ideas: Array.isArray(theme.big_ideas) ? theme.big_ideas.map((idea: string) => {
+                const parts = idea.split('"');
+                return {
+                  title: parts[0].trim().replace('• ', ''),
+                  quote: parts[1] || ''
+                };
+              }) : []
+            }))
+          }
+        };
+
         setProfile(profileResponse.data);
-        setPodcastOverview(overviewResponse.data as PodcastOverview);
+        setPodcastOverview(transformedData as PodcastOverview);
       } catch (err: any) {
         console.error(err);
         setError(err.message || 'An unexpected error occurred.');
@@ -99,7 +125,6 @@ function OverviewContent() {
     loadProfileAndOverview();
   }, [user]);
 
-  // Typing animation effect
   useEffect(() => {
     if (podcastOverview && !showChat && !showCards) {
       const heading = "wtf was this podcast all about?";
@@ -118,7 +143,6 @@ function OverviewContent() {
     }
   }, [podcastOverview, showChat, showCards]);
 
-  // Event Handlers and Helper Functions
   const handleCardClick = (theme: Theme) => {
     setSelectedTheme(theme);
   };
@@ -143,6 +167,8 @@ function OverviewContent() {
       setError('Please select at least one theme to explore.');
       return;
     }
+    const selectedThemeObjects = getSelectedThemeObjects();
+    localStorage.setItem('selectedThemes', JSON.stringify(selectedThemeObjects));
     setShowChat(true);
   };
 
@@ -183,7 +209,6 @@ function OverviewContent() {
     <div className="flex flex-col min-h-screen bg-background text-white font-sans">
       <Header showFullNav={false} />
       {!showCards && !showChat ? (
-        // First View - Centered Overview
         <main className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8">
           <div className="w-full max-w-4xl mx-auto">
             <div className="flex items-start space-x-6">
@@ -246,10 +271,8 @@ function OverviewContent() {
           selectedThemes={getSelectedThemeObjects()}
         />
       ) : (
-        // Second View - Theme Cards with Avatar Header
         <main className="flex-1 flex flex-col p-4 sm:p-6 md:p-8">
           <div className="w-full max-w-7xl mx-auto">
-            {/* Theme Introduction with Avatar */}
             <div className="flex items-start space-x-6 mb-12">
               <div className="flex-shrink-0">
                 <Avatar className="w-20 h-20 border-2 border-ctaGreen">
@@ -272,7 +295,6 @@ function OverviewContent() {
               </div>
             </div>
 
-            {/* Theme Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {podcastOverview.metadata.themes.map((theme) => (
                 <motion.div
@@ -305,7 +327,6 @@ function OverviewContent() {
               ))}
             </div>
 
-            {/* Start Button */}
             <div className="text-center mt-12">
               <Button
                 onClick={handleStartChat}
@@ -318,7 +339,6 @@ function OverviewContent() {
               </Button>
             </div>
 
-            {/* Theme Details Modal */}
             <AnimatePresence>
               {selectedTheme && (
                 <motion.div
@@ -345,7 +365,7 @@ function OverviewContent() {
                       >
                         <X className="h-6 w-6" />
                       </Button>
-                    </div>
+                      </div>
                     <p className="text-gray-300 leading-relaxed">{selectedTheme.theme_gist}</p>
                   </motion.div>
                 </motion.div>

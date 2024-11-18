@@ -108,6 +108,16 @@ export function Componentv2() {
       title: 'Gwern Branwen - How an Anonymous Researcher Predicted AIs Trajectory',
       thumbnail: 'https://img.youtube.com/vi/a42key59cZQ/maxresdefault.jpg',
     },
+    {
+      id: '20241117123755',
+      title: 'Learning at test time in LLMs',
+      thumbnail: 'https://img.youtube.com/vi/vei7uf9wOxI/maxresdefault.jpg',
+    },
+    {
+      id: '20241118105726',
+      title: 'How To Build The Future: Sam Altman',
+      thumbnail: 'https://img.youtube.com/vi/xXCBz_8hM9w/maxresdefault.jpg',
+    },
   ];
 
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {

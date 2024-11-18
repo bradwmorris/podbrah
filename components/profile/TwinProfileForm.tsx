@@ -1,4 +1,3 @@
-// components/profile/TwinProfileForm.tsx
 'use client';
 
 import { useState } from 'react';
@@ -11,6 +10,7 @@ import { UserCircle2 } from 'lucide-react';
 
 export default function TwinProfileForm() {
   const router = useRouter();
+  const [showForm, setShowForm] = useState(false);
   const [twinName, setTwinName] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -106,6 +106,28 @@ export default function TwinProfileForm() {
     }
   };
 
+  if (!showForm) {
+    return (
+      <div className="w-full max-w-md mx-auto text-center">
+        <h2 className="text-4xl font-bold text-white mb-6">
+          Design your AI-Powered Podcast Servant
+        </h2>
+        <p className="text-white mb-8 leading-relaxed">
+          Your digital twin will get to know you and your favourite podcasts. 
+          It will help collect and curate your ideas and share them with others. 
+          Your digital twin will interact with other agents, and search the web for 
+          interesting connections and patterns and report back to you. They will be on dislay for others to see, so set them a cool name and display picture, but make sure your friends know who you are.
+        </p>
+        <Button
+          onClick={() => setShowForm(true)}
+          className="bg-ctaGreen text-white py-6 px-8 text-lg hover:bg-ctaGreen/90 transition-colors"
+        >
+          Ready to design your agent?
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-md mx-auto">
       {/* Empty Avatar Display */}
@@ -166,10 +188,6 @@ export default function TwinProfileForm() {
         >
           {isLoading ? 'Creating...' : 'Create Your Digital Twin'}
         </Button>
-
-        <p className="text-ctaGreen text-sm text-center mt-6 leading-relaxed">
-          They will get to know you, your quirks, your best and brightest ideas. They will guide you through your favourite podcasts, extracting the most goodness. They will find you new podcasts, new material, and help you connect with other curious humans who love nerding out over the same conversations.
-        </p>
       </form>
     </div>
   );

@@ -10,16 +10,21 @@ import { Progress } from "@/components/ui/progress";
 import { supabaseAuth } from '@/lib/supabaseAuth';
 import { useAuth } from '@/components/auth/AuthProvider';
 
-interface Theme {
-  theme_title: string;
-  theme_gist: string;
-  chapter_number: number;
+interface BigIdea {
+  title: string;
+  quote: string;
 }
 
-interface ChatProps {
-  podcastId: number;
-  podcastTitle?: string;
-  selectedThemes?: Theme[];
+interface Theme {
+  chapter_number: number;
+  theme_title: string;
+  theme_gist: string;
+  metadata?: {
+    theme_gist?: string;
+    simple_breakdown?: string;
+  };
+  big_ideas?: BigIdea[];
+  simple_breakdown?: string;
 }
 
 interface ThemeResponse {
@@ -32,7 +37,13 @@ interface Profile {
   avatar_url: string | null;
 }
 
-type Stage = 'present' | 'explain' | 'confirm' | 'why_listen' | 'complete';
+interface ChatProps {
+  podcastId: number;
+  podcastTitle: string;
+  selectedThemes: Theme[];
+}
+
+type Stage = 'present' | 'clarify' | 'explain' | 'confirm';
 
 const Chat = ({ podcastId, podcastTitle, selectedThemes = [] }: ChatProps) => {
   const router = useRouter();
@@ -42,27 +53,18 @@ const Chat = ({ podcastId, podcastTitle, selectedThemes = [] }: ChatProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentThemeIndex, setCurrentThemeIndex] = useState(0);
   const [currentStage, setCurrentStage] = useState<Stage>('present');
-  const [userExplanation, setUserExplanation] = useState('');
-  const [whyListenResponse, setWhyListenResponse] = useState('');
-  const [themeResponses, setThemeResponses] = useState<ThemeResponse[]>([]);
+  const [userExplanations, setUserExplanations] = useState<ThemeResponse[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [showButtons, setShowButtons] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const [localThemes, setLocalThemes] = useState<Theme[]>(selectedThemes);
 
-  // Calculate progress - themes are 90%, final why_listen is 10%
   const calculateProgress = () => {
-    const themeWeight = 90;
-    const whyListenWeight = 10;
-    
-    if (currentStage === 'why_listen' || currentStage === 'complete') {
-      return themeWeight + whyListenWeight;
-    }
-
-    const stepsPerTheme = 3; // present, explain, confirm
-    const currentThemeProgress = themeWeight * (currentThemeIndex / selectedThemes.length);
-    const currentStageProgress = themeWeight * (1 / selectedThemes.length) * 
-      (['present', 'explain', 'confirm'].indexOf(currentStage) + 1) / stepsPerTheme;
-
-    return Math.min(themeWeight, currentThemeProgress + currentStageProgress);
+    if (localThemes.length === 0) return 0;
+    const totalSteps = localThemes.length * 4;
+    const currentStep = (currentThemeIndex * 4) + 
+      ['present', 'clarify', 'explain', 'confirm'].indexOf(currentStage) + 1;
+    return Math.min((currentStep / totalSteps) * 100, 100);
   };
 
   useEffect(() => {
@@ -84,33 +86,86 @@ const Chat = ({ podcastId, podcastTitle, selectedThemes = [] }: ChatProps) => {
   }, [user]);
 
   useEffect(() => {
-    if (selectedThemes.length > 0 && currentStage === 'present') {
-      const currentTheme = selectedThemes[currentThemeIndex];
-      setMessages([{
-        role: 'assistant',
-        content: currentTheme.theme_gist
-      }, {
-        role: 'assistant',
-        content: "How would you explain this to a 'simple' friend, who had no idea what-da-fuck? you were talking bout?"
-      }]);
+    // Load themes from localStorage if none were passed as props
+    if (localThemes.length === 0) {
+      const storedThemes = localStorage.getItem('selectedThemes');
+      if (storedThemes) {
+        const parsedThemes = JSON.parse(storedThemes);
+        setLocalThemes(parsedThemes);
+      }
     }
-  }, [currentThemeIndex, selectedThemes, currentStage]);
+  }, []);
+
+  useEffect(() => {
+    if (localThemes.length > 0 && currentStage === 'present') {
+      const currentTheme = localThemes[currentThemeIndex];
+      if (!currentTheme) return;
+
+      const initialMessages = [
+        {
+          role: 'assistant',
+          content: currentTheme.theme_gist || currentTheme.metadata?.theme_gist || ''
+        }
+      ];
+
+      if (currentTheme.big_ideas && Array.isArray(currentTheme.big_ideas)) {
+        currentTheme.big_ideas.forEach(idea => {
+          if (idea.title && idea.quote) {
+            initialMessages.push({
+              role: 'assistant',
+              content: `💡 ${idea.title}\n"${idea.quote}"`
+            });
+          }
+        });
+      }
+
+      initialMessages.push({
+        role: 'assistant',
+        content: "Would you like me to break this down into simpler terms?"
+      });
+
+      setMessages(initialMessages);
+      setShowButtons(true);
+    }
+  }, [currentThemeIndex, localThemes, currentStage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleNext = () => {
-    if (currentThemeIndex < selectedThemes.length - 1) {
+  const handleButtonClick = (button: 'unpack' | 'continue') => {
+    setShowButtons(false);
+    const currentTheme = localThemes[currentThemeIndex];
+    if (!currentTheme) return;
+
+    if (button === 'unpack') {
+      setCurrentStage('clarify');
+      const simpleBreakdown = currentTheme.metadata?.simple_breakdown || 
+                             currentTheme.simple_breakdown || 
+                             "Let's explore this concept in simpler terms...";
+      
+      setMessages(prev => [...prev, 
+        { role: 'assistant', content: simpleBreakdown },
+        { role: 'assistant', content: "Could you explain this in your own words?" }
+      ]);
+    } else {
+      setCurrentStage('explain');
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "Could you explain this concept in your own words?"
+      }]);
+    }
+  };
+
+  const moveToNextTheme = () => {
+    if (currentThemeIndex < localThemes.length - 1) {
       setCurrentThemeIndex(prev => prev + 1);
       setCurrentStage('present');
-      setUserExplanation('');
-    } else if (currentStage === 'confirm') {
-      setCurrentStage('why_listen');
-      setMessages([{
-        role: 'assistant',
-        content: "Why should others listen to this podcast?\n\nIf you had to share a single, most impactful insight from this conversation, what would it be?"
-      }]);
+      setShowButtons(true);
+      setMessages([]);
+    } else {
+      const encodedExplanations = encodeURIComponent(JSON.stringify(userExplanations));
+      router.push(`/simulate/discussion?explanations=${encodedExplanations}`);
     }
   };
 
@@ -123,30 +178,21 @@ const Chat = ({ podcastId, podcastTitle, selectedThemes = [] }: ChatProps) => {
     setIsLoading(true);
 
     try {
-      let nextMessage = '';
-      const currentTheme = selectedThemes[currentThemeIndex];
+      const currentTheme = localThemes[currentThemeIndex];
+      if (!currentTheme) throw new Error('No theme found');
 
-      switch (currentStage) {
-        case 'present':
-          const newResponse = {
-            themeTitle: currentTheme.theme_title,
-            userExplanation: input
-          };
-          setThemeResponses(prev => [...prev, newResponse]);
-          setUserExplanation(input);
-          nextMessage = `Here's what I understand from your explanation:\n\n${input}\n\nIs this correct?`;
-          setMessages(prev => [...prev, { role: 'assistant', content: nextMessage }]);
-          setCurrentStage('confirm');
-          break;
-
-        case 'why_listen':
-          setWhyListenResponse(input);
-          const encodedResponses = encodeURIComponent(JSON.stringify({
-            themes: themeResponses,
-            whyListen: input
-          }));
-          router.push(`/simulate/overview/summary?responses=${encodedResponses}`);
-          return;
+      if (currentStage === 'clarify' || currentStage === 'explain') {
+        const newResponse = {
+          themeTitle: currentTheme.theme_title,
+          userExplanation: input,
+        };
+        setUserExplanations(prev => [...prev, newResponse]);
+        
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Your explanation:\n\n${input}` 
+        }]);
+        setCurrentStage('confirm');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -156,30 +202,28 @@ const Chat = ({ podcastId, podcastTitle, selectedThemes = [] }: ChatProps) => {
     }
   };
 
-  const handleComplete = () => {
-    if (currentStage === 'confirm') {
-      handleNext();
-    }
-  };
+  const currentTheme = localThemes[currentThemeIndex];
 
-  const currentTheme = selectedThemes[currentThemeIndex];
+  if (!currentTheme) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-white">No themes selected</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center min-h-screen">
       <div className="w-full max-w-3xl mx-auto flex flex-col flex-1">
-        {/* Header - Simplified */}
-        <div className="flex justify-between items-center p-6">
+        <div className="p-6 border-b border-gray-700">
+          <h1 className="text-xl font-semibold text-white mb-2">
+            {currentTheme.theme_title}
+          </h1>
           <p className="text-gray-400">
-            {currentStage === 'why_listen' ? 'Final Thoughts' : currentTheme?.theme_title}
-            {currentStage !== 'why_listen' && (
-              <span className="text-[#21C55D] ml-2">
-                Theme {currentThemeIndex + 1} of {selectedThemes.length}
-              </span>
-            )}
+            Theme {currentThemeIndex + 1} of {localThemes.length}
           </p>
         </div>
 
-        {/* Chat Messages - Centered Design */}
         <div className="flex-1 overflow-y-auto px-4 md:px-6">
           <div className="flex flex-col gap-6 max-w-2xl mx-auto">
             {messages.map((m, index) => (
@@ -237,26 +281,37 @@ const Chat = ({ podcastId, podcastTitle, selectedThemes = [] }: ChatProps) => {
           </div>
         </div>
 
-        {/* Input Section - Modern Style */}
         <div className="px-4 md:px-6 py-4 max-w-2xl mx-auto w-full">
-          {/* Progress Bar */}
           <div className="mb-4">
             <Progress value={calculateProgress()} className="h-1" />
             <div className="text-xs text-gray-400 flex justify-between mt-1">
-              <span>{currentStage.split('_').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1)
-              ).join(' ')}</span>
+              <span>{currentStage.charAt(0).toUpperCase() + currentStage.slice(1)}</span>
               <span>{Math.round(calculateProgress())}% Complete</span>
             </div>
           </div>
 
-          {currentStage === 'confirm' ? (
+          {showButtons && currentStage === 'present' ? (
+            <div className="flex gap-4">
+              <Button
+                onClick={() => handleButtonClick('unpack')}
+                className="flex-1 bg-ctaGreen text-white py-3 px-4 rounded-xl hover:bg-ctaGreen/90 transition-colors duration-200"
+              >
+                Unpack Further
+              </Button>
+              <Button
+                onClick={() => handleButtonClick('continue')}
+                className="flex-1 bg-ctaGreen text-white py-3 px-4 rounded-xl hover:bg-ctaGreen/90 transition-colors duration-200"
+              >
+                Makes Sense, Continue
+              </Button>
+            </div>
+          ) : currentStage === 'confirm' ? (
             <Button
-              onClick={handleComplete}
+              onClick={moveToNextTheme}
               className="w-full bg-ctaGreen text-white py-3 px-4 rounded-xl hover:bg-ctaGreen/90 transition-colors duration-200"
               disabled={isLoading}
             >
-              {currentThemeIndex === selectedThemes.length - 1 ? 'Final Step' : 'Next Theme'}
+              {currentThemeIndex === localThemes.length - 1 ? 'Start Discussion' : 'Next Theme'} 
             </Button>
           ) : (
             <form onSubmit={handleSubmit} className="relative">
