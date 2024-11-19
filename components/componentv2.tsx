@@ -118,6 +118,11 @@ export function Componentv2() {
       title: 'How To Build The Future: Sam Altman',
       thumbnail: 'https://img.youtube.com/vi/xXCBz_8hM9w/maxresdefault.jpg',
     },
+    {
+      id: '20241119105435',
+      title: 'Develop An 8-Figure Content Strategy in 30 Mins',
+      thumbnail: 'https://img.youtube.com/vi/tJAmLKU9DEA/maxresdefault.jpg',
+    },
   ];
 
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
