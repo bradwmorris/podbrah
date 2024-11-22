@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import ReactFlow, { 
-  Node, 
+  Node,
   Edge,
   Background,
   Controls,
@@ -12,7 +12,7 @@ import ReactFlow, {
   Position,
   useNodesState,
   useEdgesState,
-  BaseEdge
+  getStraightPath
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -88,24 +88,28 @@ const UserNode = ({ data }: NodeProps<UserNodeData>) => {
 
 // Custom Edge Component
 const PodcastEdge = ({
-  id,
   sourceX,
   sourceY,
   targetX,
   targetY,
-  data,
-  ...props
+  data
 }: EdgeProps<PodcastEdgeData>) => {
   const [showTooltip, setShowTooltip] = useState(false);
-  const edgePath = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
+  const [edgePath] = getStraightPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY
+  });
 
   return (
     <>
-      <BaseEdge
-        id={id}
-        path={edgePath}
-        {...props}
-        className="react-flow__edge-path stroke-ctaGreen/50 stroke-[2px]"
+      <path
+        className="react-flow__edge-path"
+        d={edgePath}
+        strokeWidth={2}
+        stroke="#12B76A"
+        strokeOpacity={0.5}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       />
@@ -172,8 +176,8 @@ export default function MapPage() {
       }
     });
 
-    // Create edges (podcast connections)
-    const newEdges: Edge<PodcastEdgeData>[] = [];
+    const newNodes = Array.from(uniqueUsers.values());
+    const newEdges: Edge[] = [];
     const processedPairs = new Set();
 
     feedItems.forEach(item1 => {
@@ -202,7 +206,7 @@ export default function MapPage() {
       });
     });
 
-    setNodes(Array.from(uniqueUsers.values()));
+    setNodes(newNodes);
     setEdges(newEdges);
   }, [setNodes, setEdges]);
 
@@ -255,7 +259,7 @@ export default function MapPage() {
   return (
     <div className="min-h-screen bg-background text-white flex flex-col">
       <Header />
-      <div style={{ width: '100vw', height: '100vh' }}>
+      <div style={{ width: '100vw', height: 'calc(100vh - 64px)' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
