@@ -123,6 +123,26 @@ export function Componentv2() {
       title: 'Develop An 8-Figure Content Strategy in 30 Mins',
       thumbnail: 'https://img.youtube.com/vi/tJAmLKU9DEA/maxresdefault.jpg',
     },
+    {
+      id: '20241119161410',
+      title: 'David Deutsch: The Era of Man, Popper, and Western Civilization',
+      thumbnail: 'https://img.youtube.com/vi/I3FzAjgPztU/maxresdefault.jpg',
+    },
+    {
+      id: '20241122142104',
+      title: 'Top Toxicologist： These Products Were Making Me Infertile And Are Harming Your Future Kids',
+      thumbnail: 'https://img.youtube.com/vi/rObAX1r8r0s/maxresdefault.jpg',
+    },
+    {
+      id: '20241120125657',
+      title: 'Javier Milei： President of Argentina. Freedom, Economics, and Corruption w Lex Fridman',
+      thumbnail: 'https://img.youtube.com/vi/8NLzc9kobDk/maxresdefault.jpg',
+    },
+    {
+      id: '20241122144623',
+      title: 'Dr. Terry Sejnowski： How to Improve at Learning Using Neuroscience & AI',
+      thumbnail: 'https://img.youtube.com/vi/etbfLTHD_VU/maxresdefault.jpg',
+    },
   ];
 
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
