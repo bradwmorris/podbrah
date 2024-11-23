@@ -143,6 +143,11 @@ export function Componentv2() {
       title: 'Dr. Terry Sejnowski： How to Improve at Learning Using Neuroscience & AI',
       thumbnail: 'https://img.youtube.com/vi/etbfLTHD_VU/maxresdefault.jpg',
     },
+    {
+      id: '20241123145903',
+      title: 'Trumps Mandate: An Extinction-Level Event for Federal Bureaucracy',
+      thumbnail: 'https://img.youtube.com/vi/HCfc5Pp2ysg/maxresdefault.jpg',
+    },
   ];
 
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
